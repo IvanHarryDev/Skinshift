@@ -1,0 +1,15 @@
+{
+  "entity.wildcraft.skinwalker":   "Skinwalker",
+  "entity.wildcraft.gila_monster":  "Gila Monster",
+  "entity.wildcraft.black_bear":    "Black Bear",
+  "entity.wildcraft.brook_trout":   "Brook Trout",
+  "entity.wildcraft.bison":         "Bison",
+  "entity.wildcraft.coyote":        "Coyote",
+  "entity.wildcraft.deer":          "Deer",
+  "entity.wildcraft.owl":           "Owl",
+  "item.wildcraft.trap":            "Steel Trap",
+  "item.wildcraft.brook_trout":     "Brook Trout",
+  "block.wildcraft.trap_block":     "Steel Trap",
+  "block.wildcraft.tipi":           "Tipi",
+  "itemGroup.wildcraft.main":       "WildCraft"
+}
