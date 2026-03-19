@@ -1,13 +1,20 @@
 package com.harry.wildcraft.client;
 
-import com.harry.wildcraft.WildCraftMod;
-import com.harry.wildcraft.client.render.SkinwalkerRenderer;
-import com.harry.wildcraft.init.ModEntities;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import com.harry.wildcraft.WildCraftMod;
+import com.harry.wildcraft.init.ModEntities;
+import com.harry.wildcraft.client.renderer.SkinwalkerRenderer;
+import com.harry.wildcraft.client.renderer.GilaMonsterRenderer;
+import com.harry.wildcraft.client.renderer.BlackBearRenderer;
+import com.harry.wildcraft.client.renderer.BrookTroutRenderer;
+import com.harry.wildcraft.client.renderer.BisonRenderer;
+import com.harry.wildcraft.client.renderer.CoyoteRenderer;
+import com.harry.wildcraft.client.renderer.DeerRenderer;
+import com.harry.wildcraft.client.renderer.OwlRenderer;
 
 @OnlyIn(Dist.CLIENT)
 @Mod.EventBusSubscriber(modid = WildCraftMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)

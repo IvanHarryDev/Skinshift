@@ -1,4 +1,4 @@
-package com.harry.wildcraft.client.render;
+package com.harry.wildcraft.client.renderer;
 
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;

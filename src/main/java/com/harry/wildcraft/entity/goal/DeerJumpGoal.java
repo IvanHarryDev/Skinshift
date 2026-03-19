@@ -16,7 +16,8 @@ public class DeerJumpGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return jumpCooldown <= 0 && deer.isOnGround()
+        return jumpCooldown <= 0
+                && deer.onGround()
                 && deer.getDeltaMovement().horizontalDistanceSqr() > 0.05;
     }
 
@@ -27,15 +28,12 @@ public class DeerJumpGoal extends Goal {
         deer.setDeltaMovement(
                 deer.getDeltaMovement().x,
                 jumpPower,
-                deer.getDeltaMovement().z
-        );
+                deer.getDeltaMovement().z);
         jumpCooldown = 20;
     }
 
     @Override
-    public void tick() {
-        if (jumpCooldown > 0) jumpCooldown--;
-    }
+    public void tick() { if (jumpCooldown > 0) jumpCooldown--; }
 
     @Override
     public boolean canContinueToUse() { return false; }

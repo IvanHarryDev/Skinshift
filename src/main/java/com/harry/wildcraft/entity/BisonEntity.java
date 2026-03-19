@@ -5,7 +5,9 @@ import com.harry.wildcraft.entity.goal.BisonGroupLeaderGoal;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -17,13 +19,30 @@ import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import software.bernie.geckolib.animatable.GeoEntity;
+import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.core.animation.AnimatableManager;
+import software.bernie.geckolib.core.animation.AnimationController;
+import software.bernie.geckolib.core.animation.RawAnimation;
+import software.bernie.geckolib.util.GeckoLibUtil;
+
+import javax.annotation.Nullable;
 
 public class BisonEntity extends Animal implements GeoEntity {
+
     public static final EntityDataAccessor<Boolean> IS_LEAD =
             SynchedEntityData.defineId(BisonEntity.class, EntityDataSerializers.BOOLEAN);
 
+    private final AnimatableInstanceCache cache =
+            GeckoLibUtil.createInstanceCache(this);  // REQUERIDO por GeoEntity
+
     public BisonEntity(EntityType<? extends BisonEntity> type, Level level) {
         super(type, level);
+    }
+
+    @Override
+    protected void defineSynchedData() {
+        super.defineSynchedData();
+        entityData.define(IS_LEAD, false);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -35,12 +54,6 @@ public class BisonEntity extends Animal implements GeoEntity {
     }
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        entityData.define(IS_LEAD, false);
-    }
-
-    @Override
     protected void registerGoals() {
         goalSelector.addGoal(1, new BisonChargeGoal(this));
         goalSelector.addGoal(2, new WaterAvoidingRandomStrollGoal(this, 0.5));
@@ -49,22 +62,39 @@ public class BisonEntity extends Animal implements GeoEntity {
         targetSelector.addGoal(2, new BisonGroupLeaderGoal(this));
     }
 
+    public boolean isLead() { return entityData.get(IS_LEAD); }
+    public void setLead(boolean v) { entityData.set(IS_LEAD, v); }
+
     @Override
     public void die(DamageSource src) {
         super.die(src);
-        if (Boolean.TRUE.equals(entityData.get(IS_LEAD))) {
+        if (isLead()) {
             level().getEntitiesOfClass(BisonEntity.class,
                             getBoundingBox().inflate(30), b -> b != this && b.isAlive())
                     .stream().findFirst()
-                    .ifPresent(b -> b.entityData.set(IS_LEAD, true));
+                    .ifPresent(b -> b.setLead(true));
         }
     }
 
+    @Nullable
     @Override
-    @javax.annotation.Nullable
-    public net.minecraft.world.entity.AgeableMob getBreedOffspring(
-            net.minecraft.server.level.ServerLevel level,
-            net.minecraft.world.entity.AgeableMob otherParent) {
-        return null;
+    public AgeableMob getBreedOffspring(ServerLevel level, AgeableMob other) { return null; }
+
+    // GeckoLib
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar r) {
+        r.add(new AnimationController<>(this, "main", 5, state -> {
+            if (isAggressive())
+                return state.setAndContinue(
+                        RawAnimation.begin().thenLoop("animation.bison.run"));
+            if (getDeltaMovement().horizontalDistanceSqr() > 0.001)
+                return state.setAndContinue(
+                        RawAnimation.begin().thenLoop("animation.bison.walk"));
+            return state.setAndContinue(
+                    RawAnimation.begin().thenLoop("animation.bison.idle"));
+        }));
     }
+
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() { return cache; }
 }

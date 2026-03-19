@@ -154,6 +154,9 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
     public void           setPendingThreateningHit(boolean b){ this.pendingThreateningHit = b; }
     public String         getLastBiome()            { return lastBiome; }
     public void           setLastBiome(String b)    { this.lastBiome = b; }
+    public int  getLookAtTimer()          { return lookAtTimer; }
+    public void setLookAtTimer(int v)      { this.lookAtTimer = v; }
+    public void incrementLookAtTimer()     { this.lookAtTimer++; }
 
     // ---- GeckoLib ----
     @Override

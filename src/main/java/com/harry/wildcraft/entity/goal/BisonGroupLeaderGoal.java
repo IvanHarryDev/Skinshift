@@ -21,7 +21,7 @@ public class BisonGroupLeaderGoal extends TargetGoal {
         nearPlayer = bison.level().getNearestPlayer(bison, 5.0);
         if (nearPlayer == null || nearPlayer.isCreative() || nearPlayer.isSpectator())
             return false;
-        bison.entityData.set(BisonEntity.IS_LEAD, true);
+        bison.setLead(true);
         return true;
     }
 

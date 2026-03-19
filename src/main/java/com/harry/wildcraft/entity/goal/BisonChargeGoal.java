@@ -18,7 +18,7 @@ public class BisonChargeGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        if (!Boolean.TRUE.equals(bison.entityData.get(BisonEntity.IS_LEAD))) return false;
+        if (!bison.isLead()) return false;
         LivingEntity target = bison.getTarget();
         if (target == null || !target.isAlive()) return false;
         chargeTarget = target;
@@ -30,8 +30,7 @@ public class BisonChargeGoal extends Goal {
         if (chargeTarget == null || !chargeTarget.isAlive()) { stop(); return; }
         bison.getNavigation().moveTo(chargeTarget, 1.2);
         bison.setYRot(bison.yBodyRot);
-        if (bison.distanceTo(chargeTarget) > 20
-                && chargeTarget instanceof Player
+        if (bison.distanceTo(chargeTarget) > 20 && chargeTarget instanceof Player
                 && !bison.level().isClientSide) {
             bison.setTarget(null);
             stop();
@@ -40,7 +39,6 @@ public class BisonChargeGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        return chargeTarget != null && chargeTarget.isAlive()
-                && Boolean.TRUE.equals(bison.entityData.get(BisonEntity.IS_LEAD));
+        return chargeTarget != null && chargeTarget.isAlive() && bison.isLead();
     }
 }
