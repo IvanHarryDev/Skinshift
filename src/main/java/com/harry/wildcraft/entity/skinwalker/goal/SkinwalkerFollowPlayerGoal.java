@@ -25,6 +25,7 @@ public class SkinwalkerFollowPlayerGoal extends Goal {
     @Override
     public void tick() {
         if (!(sw.level() instanceof ServerLevel level)) return;
+        if (sw.getTargetPlayerUUID() == null) return;
         target = level.getPlayerByUUID(sw.getTargetPlayerUUID());
         if (target == null) return;
 

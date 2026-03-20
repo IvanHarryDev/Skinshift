@@ -10,6 +10,7 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
 import software.bernie.geckolib.GeckoLib;
 
@@ -18,7 +19,8 @@ public class WildCraftMod {
     public static final String MOD_ID = "wildcraft";
     public static final Logger LOGGER = LogUtils.getLogger();
 
-    public WildCraftMod(IEventBus modBus) {
+    public WildCraftMod() {
+        IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
         IEventBus forgeBus = MinecraftForge.EVENT_BUS;
 
         ModEntities.ENTITIES.register(modBus);

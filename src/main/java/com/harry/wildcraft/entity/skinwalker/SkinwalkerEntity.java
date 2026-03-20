@@ -13,6 +13,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.level.Level;
 import software.bernie.geckolib.animatable.GeoEntity;
@@ -82,6 +83,7 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
     public void tick() {
         super.tick();
         if (level().isClientSide || modeLocked) return;
+        if (targetPlayerUUID == null) return;
         modeTimer++;
         SkinwalkerMode mode = getMode();
         if (mode == SkinwalkerMode.PASSIVE && modeTimer >= PASSIVE_DURATION) {
@@ -95,11 +97,13 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
 
     @Override
     public boolean hurt(DamageSource source, float amount) {
+        if (level().isClientSide) return false;
+
         SkinwalkerMode mode = getMode();
         boolean isProjectile = source.getDirectEntity() instanceof Projectile;
 
         if (mode == SkinwalkerMode.PASSIVE) {
-            if (source.getEntity() instanceof net.minecraft.world.entity.player.Player p) {
+            if (source.getEntity() instanceof Player p) {
                 poofAndRespawn((ServerLevel) level(), p);
             }
             return false;

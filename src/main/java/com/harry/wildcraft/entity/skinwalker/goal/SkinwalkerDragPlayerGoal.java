@@ -26,6 +26,7 @@ public class SkinwalkerDragPlayerGoal extends Goal {
     @Override
     public boolean canUse() {
         if (sw.getMode() != SkinwalkerMode.AGGRESSIVE) return false;
+        if (sw.getTargetPlayerUUID() == null) return false;
         if (!(sw.level() instanceof ServerLevel sl)) return false;
         Player target = sl.getPlayerByUUID(sw.getTargetPlayerUUID());
         return target != null && sw.distanceTo(target) < 2.5;

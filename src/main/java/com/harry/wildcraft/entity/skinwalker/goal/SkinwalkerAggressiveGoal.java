@@ -30,6 +30,7 @@ public class SkinwalkerAggressiveGoal extends Goal {
     @Override
     public void tick() {
         if (!(sw.level() instanceof ServerLevel level)) return;
+        if (sw.getTargetPlayerUUID() == null) return;
         Player target = level.getPlayerByUUID(sw.getTargetPlayerUUID());
         if (target == null) return;
         sw.setTarget(target);
