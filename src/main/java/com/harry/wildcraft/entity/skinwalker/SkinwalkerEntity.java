@@ -1,9 +1,6 @@
 package com.harry.wildcraft.entity.skinwalker;
 
-import com.harry.wildcraft.entity.skinwalker.goal.SkinwalkerAggressiveGoal;
-import com.harry.wildcraft.entity.skinwalker.goal.SkinwalkerBreakBlocksGoal;
-import com.harry.wildcraft.entity.skinwalker.goal.SkinwalkerDragPlayerGoal;
-import com.harry.wildcraft.entity.skinwalker.goal.SkinwalkerFollowPlayerGoal;
+import com.harry.wildcraft.entity.skinwalker.goal.*;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -43,6 +40,9 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
     private boolean pendingThreateningHit = false;
     private String lastBiome          = "";
     int  lookAtTimer      = 0;
+    private boolean nocturnalCrouch = false;
+    private boolean isEating    = false;
+    private boolean isRangedHurt = false;
 
     public static final int PASSIVE_DURATION     = 20 * 60 * 60 * 3;
     public static final int THREATENING_DURATION = 20 * 60 * 60 * 2;
@@ -77,6 +77,7 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
         goalSelector.addGoal(1, new SkinwalkerDragPlayerGoal(this));
         goalSelector.addGoal(2, new SkinwalkerAggressiveGoal(this));
         goalSelector.addGoal(3, new SkinwalkerBreakBlocksGoal(this));
+        goalSelector.addGoal(4, new SkinwalkerThreatAttackGoal(this));
     }
 
     @Override
@@ -128,7 +129,8 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
             return false;
         }
         if (isProjectile) {
-            entityData.set(IS_SCREAMING, true);
+            setRangedHurt(true);
+            setScreaming(true);
         }
         return super.hurt(source, amount);
     }
@@ -161,21 +163,78 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
     public int  getLookAtTimer()          { return lookAtTimer; }
     public void setLookAtTimer(int v)      { this.lookAtTimer = v; }
     public void incrementLookAtTimer()     { this.lookAtTimer++; }
+    public boolean isNocturnalCrouch() { return nocturnalCrouch; }
+    public void randomizeNocturnalCrouch() {
+        this.nocturnalCrouch = this.random.nextBoolean();
+    }
+    public boolean isEating()           { return isEating; }
+    public void    setEating(boolean b) { this.isEating = b; }
+
+    public boolean isRangedHurt()           { return isRangedHurt; }
+    public void    setRangedHurt(boolean b) { this.isRangedHurt = b; }
 
     // ---- GeckoLib ----
     @Override
-    public void registerControllers(AnimatableManager.ControllerRegistrar r) {
-        r.add(new AnimationController<>(this, "main", 5, state -> {
+    public void registerControllers(AnimatableManager.ControllerRegistrar registrar) {
+        registrar.add(new AnimationController<>(this, "main", 5, state -> {
             SkinwalkerMode mode = getMode();
-            if (Boolean.TRUE.equals(entityData.get(IS_SCREAMING)))
-                return state.setAndContinue(RawAnimation.begin().thenPlay("animation.skinwalker.scream"));
-            if (isDraggingPlayer)
-                return state.setAndContinue(RawAnimation.begin().thenLoop("animation.skinwalker.drag"));
-            if (mode == SkinwalkerMode.AGGRESSIVE && this.isAggressive())
-                return state.setAndContinue(RawAnimation.begin().thenLoop("animation.skinwalker.run"));
-            if (this.getDeltaMovement().horizontalDistanceSqr() > 0.001)
-                return state.setAndContinue(RawAnimation.begin().thenLoop("animation.skinwalker.walk"));
-            return state.setAndContinue(RawAnimation.begin().thenLoop("animation.skinwalker.idle"));
+
+            // Priority 1: Scream
+            if (isScreaming()) {
+                if (state.getController().getAnimationState()
+                        == AnimationController.State.STOPPED) {
+                    setScreaming(false);
+                }
+                return state.setAndContinue(
+                        RawAnimation.begin().thenPlay("animation.skinwalker.scream"));
+            }
+
+            // Priority 2: Drag
+            if (isDraggingPlayer()) {
+                return state.setAndContinue(
+                        RawAnimation.begin().thenLoop("animation.skinwalker.drag"));
+            }
+
+            // Priority 3: Eat
+            if (isEating()) {
+                return state.setAndContinue(
+                        RawAnimation.begin().thenPlay("animation.skinwalker.eat"));
+            }
+
+            // Priority 4: Ranged hurt
+            if (isRangedHurt()) {
+                if (state.getController().getAnimationState()
+                        == AnimationController.State.STOPPED) {
+                    setRangedHurt(false);
+                }
+                return state.setAndContinue(
+                        RawAnimation.begin().thenPlay("animation.skinwalker.hurt_ranged"));
+            }
+
+            // Priority 5: Crouch nocturn
+            if (mode == SkinwalkerMode.THREATENING && isNocturnalCrouch()
+                    && !level().isDay()
+                    && getDeltaMovement().horizontalDistanceSqr() < 0.001) {
+                return state.setAndContinue(
+                        RawAnimation.begin().thenLoop("animation.skinwalker.crouch"));
+            }
+
+            // Priority 6: Run agresive
+            if (mode == SkinwalkerMode.AGGRESSIVE
+                    && getDeltaMovement().horizontalDistanceSqr() > 0.001) {
+                return state.setAndContinue(
+                        RawAnimation.begin().thenLoop("animation.skinwalker.run"));
+            }
+
+            // Priority 7: Walk
+            if (getDeltaMovement().horizontalDistanceSqr() > 0.001) {
+                return state.setAndContinue(
+                        RawAnimation.begin().thenLoop("animation.skinwalker.walk"));
+            }
+
+            // DEFAULT: Idle
+            return state.setAndContinue(
+                    RawAnimation.begin().thenLoop("animation.skinwalker.idle"));
         }));
     }
 

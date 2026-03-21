@@ -54,7 +54,9 @@ public class SkinwalkerDragPlayerGoal extends Goal {
 
     private void triggerEatSequence() {
         draggedPlayer.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 255));
+        sw.setEating(true);
         draggedPlayer.hurt(sw.level().damageSources().mobAttack(sw), 12.0f);
+        sw.setEating(false);
         sw.setScreaming(true);
         sw.setTarget(draggedPlayer);
         stop();
