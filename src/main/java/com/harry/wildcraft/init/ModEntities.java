@@ -25,7 +25,7 @@ public class ModEntities {
             ENTITIES.register("gila_monster",
                     () -> EntityType.Builder.<GilaMonsterEntity>of(GilaMonsterEntity::new,
                                     MobCategory.CREATURE)
-                            .sized(0.6f, 0.3f)
+                            .sized(0.8f, 0.45f)
                             .build("gila_monster"));
 
     public static final RegistryObject<EntityType<BlackBearEntity>> BLACK_BEAR =

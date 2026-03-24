@@ -3,6 +3,7 @@ package com.harry.wildcraft.entity;
 import com.harry.wildcraft.entity.goal.OwlFlyToTreeGoal;
 import com.harry.wildcraft.init.ModSounds;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.FlyingMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -16,6 +17,7 @@ import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache
 import software.bernie.geckolib.core.animation.AnimatableManager;
 import software.bernie.geckolib.core.animation.AnimationController;
 import software.bernie.geckolib.core.animation.RawAnimation;
+import software.bernie.geckolib.core.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 public class OwlEntity extends FlyingMob implements GeoEntity {
@@ -64,17 +66,24 @@ public class OwlEntity extends FlyingMob implements GeoEntity {
     }
 
     @Override
-    public void registerControllers(AnimatableManager.ControllerRegistrar r) {
-        r.add(new AnimationController<>(this, "main", 5, state -> {
-            if (!onGround() || isNoGravity())
-                return state.setAndContinue(
-                        RawAnimation.begin().thenLoop("animation.owl.fly"));
+    public boolean hurt(DamageSource src, float dmg) {
+        boolean h = super.hurt(src, dmg);
+        if (h) triggerAnim("events", "hurt");
+        return h;
+    }
+
+    // ---- GeckoLib ----
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar registrar) {
+        registrar.add(new AnimationController<>(this, "main", 5, state -> {
+            if (isNoGravity() || getDeltaMovement().y != 0 && !onGround())
+                return state.setAndContinue(RawAnimation.begin().thenLoop("animation.owl.fly"));
             if (getDeltaMovement().horizontalDistanceSqr() > 0.001)
-                return state.setAndContinue(
-                        RawAnimation.begin().thenLoop("animation.owl.walk"));
-            return state.setAndContinue(
-                    RawAnimation.begin().thenLoop("animation.owl.idle"));
+                return state.setAndContinue(RawAnimation.begin().thenLoop("animation.owl.walk"));
+            return state.setAndContinue(RawAnimation.begin().thenLoop("animation.owl.idle"));
         }));
+        registrar.add(new AnimationController<>(this, "events", 0, state -> PlayState.STOP)
+                .triggerableAnim("hurt", RawAnimation.begin().thenPlay("animation.owl.hurt")));
     }
 
     @Override

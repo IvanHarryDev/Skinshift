@@ -11,5 +11,13 @@
   "item.wildcraft.brook_trout":     "Brook Trout",
   "block.wildcraft.trap_block":     "Steel Trap",
   "block.wildcraft.tipi":           "Tipi",
-  "itemGroup.wildcraft.main":       "WildCraft"
+  "itemGroup.wildcraft.main":       "WildCraft",
+  "item.wildcraft.skinwalker_spawn_egg":   "Skinwalker Spawn Egg",
+  "item.wildcraft.gila_monster_spawn_egg": "Gila Monster Spawn Egg",
+  "item.wildcraft.black_bear_spawn_egg":   "Black Bear Spawn Egg",
+  "item.wildcraft.brook_trout_spawn_egg":  "Brook Trout Spawn Egg",
+  "item.wildcraft.bison_spawn_egg":        "Bison Spawn Egg",
+  "item.wildcraft.coyote_spawn_egg":       "Coyote Spawn Egg",
+  "item.wildcraft.deer_spawn_egg":         "Deer Spawn Egg",
+  "item.wildcraft.owl_spawn_egg":          "Owl Spawn Egg"
 }

@@ -25,6 +25,7 @@ import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache
 import software.bernie.geckolib.core.animation.AnimatableManager;
 import software.bernie.geckolib.core.animation.AnimationController;
 import software.bernie.geckolib.core.animation.RawAnimation;
+import software.bernie.geckolib.core.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import javax.annotation.Nullable;
@@ -97,19 +98,25 @@ public class DeerEntity extends Animal implements GeoEntity {
     @Override
     public AgeableMob getBreedOffspring(ServerLevel level, AgeableMob other) { return null; }
 
-    // GeckoLib
+    // ---- GeckoLib ----
     @Override
-    public void registerControllers(AnimatableManager.ControllerRegistrar r) {
-        r.add(new AnimationController<>(this, "main", 5, state -> {
-            if (isAggressive())
-                return state.setAndContinue(
-                        RawAnimation.begin().thenLoop("animation.deer.run"));
+    public void registerControllers(AnimatableManager.ControllerRegistrar registrar) {
+        registrar.add(new AnimationController<>(this, "main", 5, state -> {
+            if (!isAlive())
+                return state.setAndContinue(RawAnimation.begin().thenPlay("animation.deer.death"));
+            if (isAggressive() && getDeltaMovement().horizontalDistanceSqr() > 0.05)
+                return state.setAndContinue(RawAnimation.begin().thenLoop("animation.deer.sprint_jump"));
+            if (isAggressive() && getDeltaMovement().horizontalDistanceSqr() > 0.001)
+                return state.setAndContinue(RawAnimation.begin().thenLoop("animation.deer.sprint"));
             if (getDeltaMovement().horizontalDistanceSqr() > 0.001)
-                return state.setAndContinue(
-                        RawAnimation.begin().thenLoop("animation.deer.walk"));
-            return state.setAndContinue(
-                    RawAnimation.begin().thenLoop("animation.deer.idle"));
+                return state.setAndContinue(RawAnimation.begin().thenLoop("animation.deer.walk"));
+            if (tickCount % 200 < 60)
+                return state.setAndContinue(RawAnimation.begin().thenLoop("animation.deer.eat"));
+            return state.setAndContinue(RawAnimation.begin().thenLoop("animation.deer.idle"));
         }));
+        registrar.add(new AnimationController<>(this, "events", 0, state -> PlayState.STOP)
+                .triggerableAnim("attack", RawAnimation.begin().thenPlay("animation.deer.attack"))
+                .triggerableAnim("hurt",   RawAnimation.begin().thenPlay("animation.deer.hurt")));
     }
 
     @Override

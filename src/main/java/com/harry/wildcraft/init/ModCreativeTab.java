@@ -20,6 +20,14 @@ public class ModCreativeTab {
                         output.accept(ModItems.TRAP.get());
                         output.accept(ModItems.BROOK_TROUT.get());
                         output.accept(ModItems.TIPI_ITEM.get());
+                        output.accept(ModItems.SKINWALKER_EGG.get());
+                        output.accept(ModItems.GILA_MONSTER_EGG.get());
+                        output.accept(ModItems.BLACK_BEAR_EGG.get());
+                        output.accept(ModItems.BROOK_TROUT_EGG.get());
+                        output.accept(ModItems.BISON_EGG.get());
+                        output.accept(ModItems.COYOTE_EGG.get());
+                        output.accept(ModItems.DEER_EGG.get());
+                        output.accept(ModItems.OWL_EGG.get());
                     })
                     .build());
 }

@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:entity",
+  "pools": [
+    {
+      "rolls": { "min": 3, "max": 5 },
+      "entries": [{ "type": "minecraft:item", "name": "minecraft:leather" }]
+    },
+    {
+      "rolls": { "min": 2, "max": 4 },
+      "entries": [{ "type": "minecraft:item", "name": "minecraft:mutton" }]
+    }
+  ]
+}
