@@ -63,15 +63,21 @@ public class ModItems {
                             0xC4A35A, 0x7A5C28,
                             new Item.Properties()));
 
-    public static final RegistryObject<ForgeSpawnEggItem> DEER_EGG =
-            ITEMS.register("deer_spawn_egg",
-                    () -> new ForgeSpawnEggItem(ModEntities.DEER,
-                            0xC68642, 0xFFF8DC,
-                            new Item.Properties()));
-
     public static final RegistryObject<ForgeSpawnEggItem> OWL_EGG =
             ITEMS.register("owl_spawn_egg",
                     () -> new ForgeSpawnEggItem(ModEntities.OWL,
                             0x8B7355, 0xF5DEB3,
+                            new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> DEER_MALE_EGG =
+            ITEMS.register("deer_male_spawn_egg",
+                    () -> new ForgeSpawnEggItem(ModEntities.DEER_MALE,
+                            0xC68642, 0xFFD700,
+                            new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> DEER_FEMALE_EGG =
+            ITEMS.register("deer_female_spawn_egg",
+                    () -> new ForgeSpawnEggItem(ModEntities.DEER_FEMALE,
+                            0xC68642, 0xFFF8DC,
                             new Item.Properties()));
 }

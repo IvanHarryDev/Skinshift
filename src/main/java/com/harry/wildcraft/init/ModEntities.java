@@ -25,7 +25,7 @@ public class ModEntities {
             ENTITIES.register("gila_monster",
                     () -> EntityType.Builder.<GilaMonsterEntity>of(GilaMonsterEntity::new,
                                     MobCategory.CREATURE)
-                            .sized(0.8f, 0.45f)
+                            .sized(1.4f, 0.55f)
                             .build("gila_monster"));
 
     public static final RegistryObject<EntityType<BlackBearEntity>> BLACK_BEAR =
@@ -39,7 +39,7 @@ public class ModEntities {
             ENTITIES.register("brook_trout",
                     () -> EntityType.Builder.<BrookTroutEntity>of(BrookTroutEntity::new,
                                     MobCategory.WATER_CREATURE)
-                            .sized(0.5f, 0.3f)
+                            .sized(0.6f, 0.35f)
                             .build("brook_trout"));
 
     public static final RegistryObject<EntityType<BisonEntity>> BISON =
@@ -56,17 +56,24 @@ public class ModEntities {
                             .sized(0.7f, 0.9f)
                             .build("coyote"));
 
-    public static final RegistryObject<EntityType<DeerEntity>> DEER =
-            ENTITIES.register("deer",
-                    () -> EntityType.Builder.<DeerEntity>of(DeerEntity::new,
-                                    MobCategory.CREATURE)
-                            .sized(0.9f, 1.6f)
-                            .build("deer"));
-
     public static final RegistryObject<EntityType<OwlEntity>> OWL =
             ENTITIES.register("owl",
                     () -> EntityType.Builder.<OwlEntity>of(OwlEntity::new,
                                     MobCategory.AMBIENT)
                             .sized(0.6f, 0.8f)
                             .build("owl"));
+
+    public static final RegistryObject<EntityType<DeerMaleEntity>> DEER_MALE =
+            ENTITIES.register("deer_male",
+                    () -> EntityType.Builder.<DeerMaleEntity>of(DeerMaleEntity::new,
+                                    MobCategory.CREATURE)
+                            .sized(0.9f, 1.4f)
+                            .build("deer_male"));
+
+    public static final RegistryObject<EntityType<DeerFemaleEntity>> DEER_FEMALE =
+            ENTITIES.register("deer_female",
+                    () -> EntityType.Builder.<DeerFemaleEntity>of(DeerFemaleEntity::new,
+                                    MobCategory.CREATURE)
+                            .sized(0.9f, 1.4f)
+                            .build("deer_female"));
 }

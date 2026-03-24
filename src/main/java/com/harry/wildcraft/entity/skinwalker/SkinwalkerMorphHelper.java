@@ -27,7 +27,7 @@ public class SkinwalkerMorphHelper {
         common.add(() -> EntityType.PIG);
         common.add(() -> EntityType.RABBIT);
         common.add(() -> EntityType.CAT);
-        common.add(ModEntities.DEER::get);
+        common.add(ModEntities.DEER_MALE::get);
         BIOME_MOBS.put("default", common);
         BIOME_MOBS.put("forest",  common);
 
@@ -35,7 +35,7 @@ public class SkinwalkerMorphHelper {
         plains.add(() -> EntityType.COW);
         plains.add(() -> EntityType.SHEEP);
         plains.add(ModEntities.BISON::get);
-        plains.add(ModEntities.DEER::get);
+        plains.add(ModEntities.DEER_MALE::get);
         BIOME_MOBS.put("plains",  plains);
         BIOME_MOBS.put("meadow",  plains);
 

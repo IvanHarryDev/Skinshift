@@ -38,8 +38,11 @@ public class BisonEntity extends Animal implements GeoEntity {
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
+    private boolean isAttacking     = false;
+    private int     attackAnimTimer = 0;
+    private static final int ATTACK_ANIM_DURATION = 25;
     private int deathTimer = 0;
-    private static final int DEATH_DELAY_TICKS = 30;
+    private static final int DEATH_DELAY = 60;
 
     public BisonEntity(EntityType<? extends BisonEntity> type, Level level) {
         super(type, level);
@@ -53,16 +56,18 @@ public class BisonEntity extends Animal implements GeoEntity {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Mob.createMobAttributes()
-                .add(Attributes.MAX_HEALTH,    40.0)
-                .add(Attributes.MOVEMENT_SPEED, 0.28)
-                .add(Attributes.ATTACK_DAMAGE, 16.0)
-                .add(Attributes.FOLLOW_RANGE,  50.0)
-                .add(Attributes.KNOCKBACK_RESISTANCE, 0.8);
+                .add(Attributes.MAX_HEALTH,          40.0)
+                .add(Attributes.MOVEMENT_SPEED,       0.28)
+                .add(Attributes.ATTACK_DAMAGE,        16.0)
+                .add(Attributes.FOLLOW_RANGE,         50.0)
+                .add(Attributes.KNOCKBACK_RESISTANCE,  0.3);
     }
 
     @Override
     protected void registerGoals() {
-        goalSelector.addGoal(0, new MeleeAttackGoal(this, 1.2, true));
+        goalSelector.addGoal(0, new MeleeAttackGoal(this, 1.2, true) {
+            @Override protected int getAttackInterval() { return 40; }
+        });
         goalSelector.addGoal(1, new BisonChargeGoal(this));
         goalSelector.addGoal(2, new AvoidEntityGoal<>(this, Player.class, 20.0f, 0.5, 0.5,
                 e -> !((Player)e).isCreative() && !isAggressive()));
@@ -78,24 +83,28 @@ public class BisonEntity extends Animal implements GeoEntity {
     @Override
     public void tick() {
         super.tick();
-        if (!isAlive() && !level().isClientSide) {
+        if (level().isClientSide) return;
+        if (!isAlive()) {
             deathTimer++;
-            if (deathTimer < DEATH_DELAY_TICKS) {
-                setPersistenceRequired();
-            }
+            if (deathTimer < DEATH_DELAY) setPersistenceRequired();
+            return;
+        }
+        if (attackAnimTimer > 0) {
+            attackAnimTimer--;
+            if (attackAnimTimer == 0) isAttacking = false;
         }
     }
 
     @Override
-    public void die(DamageSource src) {
-        super.die(src);
-        if (isLead()) {
-            level().getEntitiesOfClass(BisonEntity.class,
-                            getBoundingBox().inflate(30), b -> b != this && b.isAlive())
-                    .stream().findFirst()
-                    .ifPresent(b -> b.setLead(true));
+    public boolean doHurtTarget(Entity target) {
+        boolean hit = super.doHurtTarget(target);
+        if (hit) {
+            isAttacking     = false;
+            attackAnimTimer = 0;
+            isAttacking     = true;
+            attackAnimTimer = ATTACK_ANIM_DURATION;
         }
-        triggerAnim("events", "death");
+        return hit;
     }
 
     @Override
@@ -106,10 +115,13 @@ public class BisonEntity extends Animal implements GeoEntity {
     }
 
     @Override
-    public boolean doHurtTarget(Entity target) {
-        boolean hit = super.doHurtTarget(target);
-        if (hit) triggerAnim("events", "attack");
-        return hit;
+    public void die(DamageSource src) {
+        super.die(src);
+        if (isLead()) {
+            level().getEntitiesOfClass(BisonEntity.class,
+                            getBoundingBox().inflate(30), b -> b != this && b.isAlive())
+                    .stream().findFirst().ifPresent(b -> b.setLead(true));
+        }
     }
 
     @Nullable
@@ -122,24 +134,22 @@ public class BisonEntity extends Animal implements GeoEntity {
         registrar.add(new AnimationController<>(this, "main", 3, state -> {
             if (!isAlive())
                 return state.setAndContinue(
-                        RawAnimation.begin().thenPlay("animation.bison.death"));
-            if (isAggressive() && getDeltaMovement().horizontalDistanceSqr() > 0.003)
+                        RawAnimation.begin().thenLoop("animation.bison.death"));
+            if (isAttacking)
+                return state.setAndContinue(
+                        RawAnimation.begin().thenPlay("animation.bison.attack"));
+            if (isAggressive() && getNavigation().isInProgress())
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.bison.sprint"));
-            if (getDeltaMovement().horizontalDistanceSqr() > 0.0003)
+            if (getNavigation().isInProgress())
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.bison.walk"));
             return state.setAndContinue(
                     RawAnimation.begin().thenLoop("animation.bison.idle"));
         }));
-        registrar.add(new AnimationController<>(this, "events", 0,
-                state -> PlayState.STOP)
-                .triggerableAnim("attack",
-                        RawAnimation.begin().thenPlay("animation.bison.attack"))
+        registrar.add(new AnimationController<>(this, "events", 0, state -> PlayState.STOP)
                 .triggerableAnim("hurt",
-                        RawAnimation.begin().thenPlay("animation.bison.hurt"))
-                .triggerableAnim("death",
-                        RawAnimation.begin().thenPlay("animation.bison.death")));
+                        RawAnimation.begin().thenPlay("animation.bison.hurt")));
     }
 
     @Override

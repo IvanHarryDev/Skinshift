@@ -31,13 +31,17 @@ public class BlackBearEntity extends Animal implements GeoEntity {
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
-    private boolean isSleeping = false;
-    private int sitTimer = 0;
-    private boolean isSitting = false;
-    private static final int SIT_INTERVAL = 400;
-    private static final int SIT_DURATION = 100;
-    private int deathTimer = 0;
-    private static final int DEATH_DELAY_TICKS = 20;
+    public boolean isSleeping = false;
+    public boolean isSitting  = false;
+    private int sitCooldown   = 200;
+    private int sitDuration   = 0;
+    private int combatTimer   = 0;
+    private int deathTimer    = 0;
+
+    private static final int SIT_COOLDOWN   = 200;
+    private static final int SIT_MAX        = 100;
+    private static final int COMBAT_TIMEOUT = 200;
+    private static final int DEATH_DELAY    = 20;
 
     public BlackBearEntity(EntityType<? extends BlackBearEntity> type, Level level) {
         super(type, level);
@@ -53,10 +57,22 @@ public class BlackBearEntity extends Animal implements GeoEntity {
 
     @Override
     protected void registerGoals() {
-        goalSelector.addGoal(0, new MeleeAttackGoal(this, 1.2, true));
+        goalSelector.addGoal(0, new MeleeAttackGoal(this, 1.2, true) {
+            @Override public boolean canUse() {
+                return !isSleeping && !isSitting && super.canUse();
+            }
+        });
         goalSelector.addGoal(1, new AvoidEntityGoal<>(this, Player.class, 20.0f, 0.7, 0.7,
-                e -> !((Player)e).isCreative() && !isAggressive()));
-        goalSelector.addGoal(2, new WaterAvoidingRandomStrollGoal(this, 0.6));
+                e -> !((Player)e).isCreative() && !isAggressive()) {
+            @Override public boolean canUse() {
+                return !isSleeping && !isSitting && super.canUse();
+            }
+        });
+        goalSelector.addGoal(2, new WaterAvoidingRandomStrollGoal(this, 0.6) {
+            @Override public boolean canUse() {
+                return !isSleeping && !isSitting && super.canUse();
+            }
+        });
         goalSelector.addGoal(3, new LookAtPlayerGoal(this, Player.class, 8.0f));
         targetSelector.addGoal(0, new HurtByTargetGoal(this));
         targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true,
@@ -66,20 +82,33 @@ public class BlackBearEntity extends Animal implements GeoEntity {
     @Override
     public void tick() {
         super.tick();
-
         if (level().isClientSide) return;
-
         if (!isAlive()) {
             deathTimer++;
-            if (deathTimer < DEATH_DELAY_TICKS) setPersistenceRequired();
+            if (deathTimer < DEATH_DELAY) setPersistenceRequired();
             return;
         }
 
-        boolean inCombat = isAggressive() || getTarget() != null;
+        boolean hasTarget = getTarget() != null && getTarget().isAlive();
+        if (hasTarget) {
+            combatTimer = COMBAT_TIMEOUT;
+            isSleeping  = false;
+            isSitting   = false;
+        } else if (combatTimer > 0) {
+            combatTimer--;
+        }
+        boolean inCombat = combatTimer > 0;
 
-        if (!level().isDay() && !inCombat) {
-            isSleeping = true;
-            isSitting  = false;
+        long dayTime = level().getDayTime() % 24000;
+        boolean isNight = dayTime >= 12541 && dayTime <= 23458;
+        if (isNight && !inCombat) {
+            if (!isSleeping) {
+                isSleeping  = true;
+                isSitting   = false;
+                sitCooldown = SIT_COOLDOWN;
+                getNavigation().stop();
+            }
+
             getNavigation().stop();
             return;
         } else {
@@ -87,37 +116,35 @@ public class BlackBearEntity extends Animal implements GeoEntity {
         }
 
         if (!inCombat) {
-            sitTimer++;
-            if (!isSitting && sitTimer >= SIT_INTERVAL) {
-                isSitting = true;
-                sitTimer  = 0;
+            if (!isSitting) {
+                sitCooldown--;
+                if (sitCooldown <= 0) {
+                    isSitting   = true;
+                    sitDuration = 0;
+                    getNavigation().stop();
+                }
+            } else {
                 getNavigation().stop();
-            }
-            if (isSitting) {
-                sitTimer++;
-                if (sitTimer >= SIT_DURATION) {
-                    isSitting = false;
-                    sitTimer  = 0;
+                sitDuration++;
+                if (sitDuration >= SIT_MAX) {
+                    isSitting   = false;
+                    sitCooldown = SIT_COOLDOWN;
                 }
             }
         } else {
-            isSitting = false;
-            sitTimer  = 0;
+            isSitting   = false;
+            sitCooldown = SIT_COOLDOWN;
         }
-    }
-
-    @Override
-    public void die(DamageSource src) {
-        super.die(src);
-        triggerAnim("events", "death");
     }
 
     @Override
     public boolean hurt(DamageSource src, float dmg) {
         boolean h = super.hurt(src, dmg);
         if (h) {
-            isSleeping = false;
-            isSitting  = false;
+            combatTimer = COMBAT_TIMEOUT;
+            isSleeping  = false;
+            isSitting   = false;
+            sitCooldown = SIT_COOLDOWN;
             triggerAnim("events", "hurt");
         }
         return h;
@@ -130,6 +157,9 @@ public class BlackBearEntity extends Animal implements GeoEntity {
         return hit;
     }
 
+    @Override
+    public void die(DamageSource src) { super.die(src); }
+
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(ServerLevel level, AgeableMob other) { return null; }
@@ -140,30 +170,27 @@ public class BlackBearEntity extends Animal implements GeoEntity {
         registrar.add(new AnimationController<>(this, "main", 3, state -> {
             if (!isAlive())
                 return state.setAndContinue(
-                        RawAnimation.begin().thenPlay("animation.black_bear.death"));
+                        RawAnimation.begin().thenLoop("animation.black_bear.death"));
             if (isSleeping)
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.black_bear.sleep"));
             if (isSitting)
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.black_bear.sit"));
-            if (isAggressive() && getDeltaMovement().horizontalDistanceSqr() > 0.003)
+            if (combatTimer > 0 && getNavigation().isInProgress())
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.black_bear.sprint"));
-            if (getDeltaMovement().horizontalDistanceSqr() > 0.0003)
+            if (getNavigation().isInProgress())
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.black_bear.walk"));
             return state.setAndContinue(
                     RawAnimation.begin().thenLoop("animation.black_bear.idle"));
         }));
-        registrar.add(new AnimationController<>(this, "events", 0,
-                state -> PlayState.STOP)
+        registrar.add(new AnimationController<>(this, "events", 0, state -> PlayState.STOP)
                 .triggerableAnim("attack",
                         RawAnimation.begin().thenPlay("animation.black_bear.attack"))
                 .triggerableAnim("hurt",
-                        RawAnimation.begin().thenPlay("animation.black_bear.hurt"))
-                .triggerableAnim("death",
-                        RawAnimation.begin().thenPlay("animation.black_bear.death")));
+                        RawAnimation.begin().thenPlay("animation.black_bear.hurt")));
     }
 
     @Override

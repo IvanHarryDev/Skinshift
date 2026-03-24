@@ -1,7 +1,6 @@
 package com.harry.wildcraft.entity.goal;
 
 import com.harry.wildcraft.entity.BisonEntity;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
 
@@ -9,36 +8,57 @@ import java.util.EnumSet;
 
 public class BisonChargeGoal extends Goal {
     private final BisonEntity bison;
-    private LivingEntity chargeTarget;
+    private Player target;
+    private int pathUpdateTimer = 0;
+    private static final int PATH_UPDATE_INTERVAL = 10;
 
     public BisonChargeGoal(BisonEntity bison) {
         this.bison = bison;
-        setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
+        setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK, Flag.TARGET));
     }
 
     @Override
     public boolean canUse() {
         if (!bison.isLead()) return false;
-        LivingEntity target = bison.getTarget();
-        if (target == null || !target.isAlive()) return false;
-        chargeTarget = target;
+        target = bison.level().getNearestPlayer(bison, 50);
+        if (target == null || target.isCreative() || target.isSpectator()) return false;
         return true;
     }
 
     @Override
-    public void tick() {
-        if (chargeTarget == null || !chargeTarget.isAlive()) { stop(); return; }
-        bison.getNavigation().moveTo(chargeTarget, 1.2);
-        bison.setYRot(bison.yBodyRot);
-        if (bison.distanceTo(chargeTarget) > 20 && chargeTarget instanceof Player
-                && !bison.level().isClientSide) {
-            bison.setTarget(null);
-            stop();
-        }
+    public boolean canContinueToUse() {
+        if (!bison.isLead() || target == null || !target.isAlive()) return false;
+        double dist = bison.distanceTo(target);
+        return dist <= 50;
     }
 
     @Override
-    public boolean canContinueToUse() {
-        return chargeTarget != null && chargeTarget.isAlive() && bison.isLead();
+    public void start() {
+        bison.setAggressive(true);
+        pathUpdateTimer = 0;
+    }
+
+    @Override
+    public void stop() {
+        bison.setAggressive(false);
+        bison.setTarget(null);
+        target = null;
+    }
+
+    @Override
+    public void tick() {
+        if (target == null || !target.isAlive()) return;
+        bison.setTarget(target);
+        bison.getLookControl().setLookAt(target, 30, 30);
+
+        pathUpdateTimer++;
+        if (pathUpdateTimer >= PATH_UPDATE_INTERVAL) {
+            pathUpdateTimer = 0;
+            bison.getNavigation().moveTo(target, 1.2);
+        }
+
+        if (bison.distanceTo(target) < 2.5) {
+            bison.setTarget(target);
+        }
     }
 }

@@ -18,7 +18,8 @@ public class ModEventHandler {
         event.put(ModEntities.BROOK_TROUT.get(),   BrookTroutEntity.createAttributes().build());
         event.put(ModEntities.BISON.get(),         BisonEntity.createAttributes().build());
         event.put(ModEntities.COYOTE.get(),        CoyoteEntity.createAttributes().build());
-        event.put(ModEntities.DEER.get(),          DeerEntity.createAttributes().build());
+        event.put(ModEntities.DEER_MALE.get(),   DeerMaleEntity.createAttributes().build());
+        event.put(ModEntities.DEER_FEMALE.get(), DeerMaleEntity.createAttributes().build());
         event.put(ModEntities.OWL.get(),           OwlEntity.createAttributes().build());
     }
 }

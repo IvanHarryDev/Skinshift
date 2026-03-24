@@ -26,7 +26,8 @@ public class ModCreativeTab {
                         output.accept(ModItems.BROOK_TROUT_EGG.get());
                         output.accept(ModItems.BISON_EGG.get());
                         output.accept(ModItems.COYOTE_EGG.get());
-                        output.accept(ModItems.DEER_EGG.get());
+                        output.accept(ModItems.DEER_FEMALE_EGG.get());
+                        output.accept(ModItems.DEER_MALE_EGG.get());
                         output.accept(ModItems.OWL_EGG.get());
                     })
                     .build());

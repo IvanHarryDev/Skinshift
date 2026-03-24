@@ -1,20 +1,16 @@
 package com.harry.wildcraft.client;
 
+import com.harry.wildcraft.WildCraftMod;
+import com.harry.wildcraft.client.renderer.*;
+import com.harry.wildcraft.init.ModEntities;
+import com.harry.wildcraft.init.ModItems;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.EntityRenderersEvent;
+import net.minecraftforge.client.event.RegisterColorHandlersEvent;
+import net.minecraftforge.common.ForgeSpawnEggItem;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import com.harry.wildcraft.WildCraftMod;
-import com.harry.wildcraft.init.ModEntities;
-import com.harry.wildcraft.client.renderer.SkinwalkerRenderer;
-import com.harry.wildcraft.client.renderer.GilaMonsterRenderer;
-import com.harry.wildcraft.client.renderer.BlackBearRenderer;
-import com.harry.wildcraft.client.renderer.BrookTroutRenderer;
-import com.harry.wildcraft.client.renderer.BisonRenderer;
-import com.harry.wildcraft.client.renderer.CoyoteRenderer;
-import com.harry.wildcraft.client.renderer.DeerRenderer;
-import com.harry.wildcraft.client.renderer.OwlRenderer;
 
 @OnlyIn(Dist.CLIENT)
 @Mod.EventBusSubscriber(modid = WildCraftMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
@@ -31,7 +27,27 @@ public class ClientSetup {
         event.registerEntityRenderer(ModEntities.BROOK_TROUT.get(),   BrookTroutRenderer::new);
         event.registerEntityRenderer(ModEntities.BISON.get(),         BisonRenderer::new);
         event.registerEntityRenderer(ModEntities.COYOTE.get(),        CoyoteRenderer::new);
-        event.registerEntityRenderer(ModEntities.DEER.get(),          DeerRenderer::new);
+        event.registerEntityRenderer(ModEntities.DEER_MALE.get(),   DeerMaleRenderer::new);
+        event.registerEntityRenderer(ModEntities.DEER_FEMALE.get(), DeerFemaleRenderer::new);
         event.registerEntityRenderer(ModEntities.OWL.get(),           OwlRenderer::new);
+    }
+
+    @SubscribeEvent
+    public static void onRegisterItemColors(RegisterColorHandlersEvent.Item event) {
+        event.register(
+                (stack, tintIndex) -> {
+                    ForgeSpawnEggItem egg = (ForgeSpawnEggItem) stack.getItem();
+                    return egg.getColor(tintIndex);
+                },
+                ModItems.SKINWALKER_EGG.get(),
+                ModItems.GILA_MONSTER_EGG.get(),
+                ModItems.BLACK_BEAR_EGG.get(),
+                ModItems.BROOK_TROUT_EGG.get(),
+                ModItems.BISON_EGG.get(),
+                ModItems.COYOTE_EGG.get(),
+                ModItems.DEER_MALE_EGG.get(),
+                ModItems.DEER_FEMALE_EGG.get(),
+                ModItems.OWL_EGG.get()
+        );
     }
 }

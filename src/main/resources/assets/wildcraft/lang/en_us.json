@@ -5,7 +5,6 @@
   "entity.wildcraft.brook_trout":   "Brook Trout",
   "entity.wildcraft.bison":         "Bison",
   "entity.wildcraft.coyote":        "Coyote",
-  "entity.wildcraft.deer":          "Deer",
   "entity.wildcraft.owl":           "Owl",
   "item.wildcraft.trap":            "Steel Trap",
   "item.wildcraft.brook_trout":     "Brook Trout",
@@ -18,6 +17,7 @@
   "item.wildcraft.brook_trout_spawn_egg":  "Brook Trout Spawn Egg",
   "item.wildcraft.bison_spawn_egg":        "Bison Spawn Egg",
   "item.wildcraft.coyote_spawn_egg":       "Coyote Spawn Egg",
-  "item.wildcraft.deer_spawn_egg":         "Deer Spawn Egg",
+  "item.wildcraft.deer_male_spawn_egg":   "Deer (Male) Spawn Egg",
+  "item.wildcraft.deer_female_spawn_egg":  "Deer (Female) Spawn Egg",
   "item.wildcraft.owl_spawn_egg":          "Owl Spawn Egg"
 }

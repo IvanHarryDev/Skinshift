@@ -35,10 +35,12 @@ public class CoyoteEntity extends Animal implements GeoEntity {
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
-    private int howlTimer = 0;
-    private static final int HOWL_INTERVAL = 600;
+    private int howlCooldown = 400;
+    private static final int HOWL_INTERVAL  = 1200;
+    private static final int HOWL_DETECT_CD = 400;
+    private boolean howlTriggeredByDetect = false;
     private int deathTimer = 0;
-    private static final int DEATH_DELAY_TICKS = 20;
+    private static final int DEATH_DELAY = 20;
 
     public CoyoteEntity(EntityType<? extends CoyoteEntity> type, Level level) {
         super(type, level);
@@ -54,64 +56,75 @@ public class CoyoteEntity extends Animal implements GeoEntity {
 
     @Override
     protected void registerGoals() {
-        goalSelector.addGoal(0, new MeleeAttackGoal(this, 1.2, true));
-        goalSelector.addGoal(1, new CoyoteStalkGoal(this));
-        goalSelector.addGoal(2, new CoyotePackAttackGoal(this));
-        goalSelector.addGoal(3, new WaterAvoidingRandomStrollGoal(this, 0.8));
+        goalSelector.addGoal(0, new MeleeAttackGoal(this, 1.0, true));
+        goalSelector.addGoal(1, new CoyotePackAttackGoal(this));
+        goalSelector.addGoal(2, new CoyoteStalkGoal(this));
+        goalSelector.addGoal(3, new WaterAvoidingRandomStrollGoal(this, 1.0));
         goalSelector.addGoal(4, new LookAtPlayerGoal(this, Player.class, 8.0f));
-        targetSelector.addGoal(0, new HurtByTargetGoal(this).setAlertOthers());
+        targetSelector.addGoal(0, new HurtByTargetGoal(this)
+                .setAlertOthers(CoyoteEntity.class));
         targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, false,
                 e -> !((Player)e).isCreative() && !((Player)e).isSpectator()));
+        targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Mob.class, false,
+                e -> e instanceof Animal && !(e instanceof CoyoteEntity)
+                        && level().getNearestPlayer(this, 150) == null));
     }
 
     public PackState getPackState() { return packState; }
-    public void setPackState(PackState s) { this.packState = s; }
+    public void setPackState(PackState s) {
+        this.packState = s;
+        if (s == PackState.ATTACKING && level() instanceof ServerLevel sl) {
+            sl.getEntitiesOfClass(CoyoteEntity.class,
+                            getBoundingBox().inflate(50), c -> c != this)
+                    .forEach(c -> c.packState = PackState.ATTACKING);
+        }
+    }
 
     @Override
     public void tick() {
         super.tick();
-
         if (level().isClientSide) return;
-
         if (!isAlive()) {
             deathTimer++;
-            if (deathTimer < DEATH_DELAY_TICKS) setPersistenceRequired();
+            if (deathTimer < DEATH_DELAY) setPersistenceRequired();
             return;
         }
 
-        if (packState == PackState.ATTACKING && getAttribute(Attributes.MOVEMENT_SPEED) != null) {
-            getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.28);
-        } else {
-            getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.22);
+        if (getAttribute(Attributes.MOVEMENT_SPEED) != null) {
+            getAttribute(Attributes.MOVEMENT_SPEED)
+                    .setBaseValue(packState == PackState.ATTACKING ? 0.28 : 0.22);
         }
 
-        if (getTarget() instanceof Player p && packState == PackState.ATTACKING
-                && distanceTo(p) > 150) {
+        if (packState == PackState.ATTACKING
+                && getTarget() instanceof Player p && distanceTo(p) > 150) {
+            setPackState(PackState.IDLE);
             setTarget(null);
-            packState = PackState.IDLE;
         }
 
-        howlTimer++;
-        boolean hasNearbyTarget = level().getNearestPlayer(this, 30) != null;
-        if (howlTimer >= HOWL_INTERVAL || (hasNearbyTarget && howlTimer > 60)) {
-            if (packState == PackState.IDLE || packState == PackState.STALKING) {
+        if (packState != PackState.ATTACKING) {
+            howlCooldown--;
+            if (howlCooldown <= 0) {
                 triggerAnim("events", "howl");
-                howlTimer = 0;
+                howlCooldown = HOWL_INTERVAL;
+                howlTriggeredByDetect = false;
+            } else if (!howlTriggeredByDetect) {
+                Player near = level().getNearestPlayer(this, 30);
+                if (near != null && !near.isCreative() && !near.isSpectator()) {
+                    triggerAnim("events", "howl");
+                    howlCooldown = HOWL_DETECT_CD;
+                    howlTriggeredByDetect = true;
+                }
             }
         }
-    }
-
-    @Override
-    public void die(DamageSource src) {
-        super.die(src);
-        triggerAnim("events", "death");
     }
 
     @Override
     public boolean hurt(DamageSource src, float dmg) {
         boolean h = super.hurt(src, dmg);
         if (h) {
-            packState = PackState.ATTACKING;
+            if (src.getEntity() instanceof Player p
+                    && !p.isCreative() && !p.isSpectator())
+                setPackState(PackState.ATTACKING);
             triggerAnim("events", "hurt");
         }
         return h;
@@ -120,9 +133,15 @@ public class CoyoteEntity extends Animal implements GeoEntity {
     @Override
     public boolean doHurtTarget(Entity target) {
         boolean hit = super.doHurtTarget(target);
-        if (hit) triggerAnim("events", "attack");
+        if (hit) {
+            if (target instanceof Player) setPackState(PackState.ATTACKING);
+            triggerAnim("events", "attack");
+        }
         return hit;
     }
+
+    @Override
+    public void die(DamageSource src) { super.die(src); }
 
     @Nullable
     @Override
@@ -134,31 +153,36 @@ public class CoyoteEntity extends Animal implements GeoEntity {
         registrar.add(new AnimationController<>(this, "main", 3, state -> {
             if (!isAlive())
                 return state.setAndContinue(
-                        RawAnimation.begin().thenPlay("animation.coyote.death"));
-            if (packState == PackState.ATTACKING
-                    && getDeltaMovement().horizontalDistanceSqr() > 0.003)
+                        RawAnimation.begin().thenLoop("animation.coyote.death"));
+
+            if (packState == PackState.ATTACKING && getNavigation().isInProgress()) {
+                state.getController().setAnimationSpeed(1.0);
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.coyote.sprint"));
-            if (packState == PackState.STALKING
-                    && getDeltaMovement().horizontalDistanceSqr() > 0.0003)
+            }
+
+            if (packState == PackState.STALKING && getNavigation().isInProgress()) {
+                state.getController().setAnimationSpeed(1.0);
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.coyote.stalk"));
-            if (getDeltaMovement().horizontalDistanceSqr() > 0.0003)
+            }
+
+            if (getNavigation().isInProgress()) {
+                state.getController().setAnimationSpeed(1.4);
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.coyote.walk"));
+            }
+            state.getController().setAnimationSpeed(1.0);
             return state.setAndContinue(
                     RawAnimation.begin().thenLoop("animation.coyote.idle"));
         }));
-        registrar.add(new AnimationController<>(this, "events", 0,
-                state -> PlayState.STOP)
+        registrar.add(new AnimationController<>(this, "events", 0, state -> PlayState.STOP)
                 .triggerableAnim("attack",
                         RawAnimation.begin().thenPlay("animation.coyote.attack"))
                 .triggerableAnim("hurt",
                         RawAnimation.begin().thenPlay("animation.coyote.hurt"))
                 .triggerableAnim("howl",
-                        RawAnimation.begin().thenPlay("animation.coyote.howl"))
-                .triggerableAnim("death",
-                        RawAnimation.begin().thenPlay("animation.coyote.death")));
+                        RawAnimation.begin().thenPlay("animation.coyote.howl")));
     }
 
     @Override
