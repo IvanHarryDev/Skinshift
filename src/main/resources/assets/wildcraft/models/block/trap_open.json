@@ -1,0 +1,7 @@
+{
+  "parent": "block/thin_block",
+  "textures": {
+    "particle": "wildcraft:block/trap",
+    "texture":  "wildcraft:block/trap_open"
+  }
+}

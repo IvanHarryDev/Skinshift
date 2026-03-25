@@ -1,0 +1,7 @@
+{
+  "type": "forge:add_spawns",
+  "biomes": "#wildcraft:black_bear_biomes",
+  "spawners": [
+    { "type": "wildcraft:black_bear", "weight": 10, "minCount": 1, "maxCount": 1 }
+  ]
+}

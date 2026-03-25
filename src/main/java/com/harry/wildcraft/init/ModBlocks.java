@@ -13,13 +13,17 @@ public class ModBlocks {
     public static final DeferredRegister<Block> BLOCKS =
             DeferredRegister.create(ForgeRegistries.BLOCKS, WildCraftMod.MOD_ID);
 
-    public static final RegistryObject<TrapBlock> TRAP_BLOCK =
+    public static final RegistryObject<Block> TRAP_BLOCK =
             BLOCKS.register("trap_block",
                     () -> new TrapBlock(BlockBehaviour.Properties.of()
-                            .strength(5.0f, 6.0f).noOcclusion()));
+                            .strength(5.0f, 6.0f)
+                            .requiresCorrectToolForDrops()
+                            .noOcclusion()
+                            .noCollission()));
 
-    public static final RegistryObject<TipiBlock> TIPI =
+    public static final RegistryObject<Block> TIPI =
             BLOCKS.register("tipi",
                     () -> new TipiBlock(BlockBehaviour.Properties.of()
-                            .strength(2.0f).noOcclusion()));
+                            .strength(1.0f, 1.0f)
+                            .noOcclusion()));
 }

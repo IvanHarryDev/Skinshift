@@ -1,0 +1,20 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:plains",
+    "minecraft:sunflower_plains",
+    "minecraft:meadow",
+    "minecraft:savanna",
+    "minecraft:savanna_plateau",
+    "minecraft:windswept_savanna",
+    "minecraft:desert",
+    "minecraft:badlands",
+    "minecraft:wooded_badlands",
+    "minecraft:eroded_badlands",
+    "#minecraft:is_forest",
+    "#minecraft:is_jungle",
+    "minecraft:swamp",
+    "minecraft:mangrove_swamp",
+    "minecraft:cherry_grove"
+  ]
+}

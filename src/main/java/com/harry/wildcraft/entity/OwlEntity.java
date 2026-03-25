@@ -1,17 +1,24 @@
 package com.harry.wildcraft.entity;
 
 import com.harry.wildcraft.entity.goal.OwlFlyToTreeGoal;
-import com.harry.wildcraft.init.ModSounds;
-import net.minecraft.sounds.SoundSource;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.FlyingMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.core.animation.AnimatableManager;
@@ -22,68 +29,214 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 public class OwlEntity extends FlyingMob implements GeoEntity {
 
-    private final AnimatableInstanceCache cache =
-            GeckoLibUtil.createInstanceCache(this);
+    public static final EntityDataAccessor<Boolean> IS_FLYING =
+            SynchedEntityData.defineId(OwlEntity.class, EntityDataSerializers.BOOLEAN);
+    public static final EntityDataAccessor<Boolean> IS_WALKING =
+            SynchedEntityData.defineId(OwlEntity.class, EntityDataSerializers.BOOLEAN);
+    public static final EntityDataAccessor<Boolean> IS_HURT_ANIM =
+            SynchedEntityData.defineId(OwlEntity.class, EntityDataSerializers.BOOLEAN);
+
+    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+
+    private int hootCooldown = 400 + (int)(Math.random() * 400);
+    private static final int HOOT_INTERVAL      = 800;
+    private int hurtAnimTimer = 0;
+    private static final int HURT_ANIM_DURATION = 15;
+    private int walkTimer    = 0;
+    private int walkDuration = 0;
+    private static final int WALK_INTERVAL = 300;
+    private static final int WALK_MAX      = 60;
+
+    private double distToGround = 999.0;
+    private static final double LANDED_THRESHOLD = 0.5;
 
     public OwlEntity(EntityType<? extends OwlEntity> type, Level level) {
         super(type, level);
     }
 
+    @Override
+    protected void defineSynchedData() {
+        super.defineSynchedData();
+        entityData.define(IS_FLYING,    false);
+        entityData.define(IS_WALKING,   false);
+        entityData.define(IS_HURT_ANIM, false);
+    }
+
+    public boolean isFlying()   { return entityData.get(IS_FLYING); }
+    public boolean isWalking()  { return entityData.get(IS_WALKING); }
+    public boolean isHurtAnim() { return entityData.get(IS_HURT_ANIM); }
+
     public static AttributeSupplier.Builder createAttributes() {
         return FlyingMob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH,    10.0)
-                .add(Attributes.MOVEMENT_SPEED,  0.2)
-                .add(Attributes.FLYING_SPEED,    0.4);
+                .add(Attributes.MOVEMENT_SPEED, 0.25)
+                .add(Attributes.FOLLOW_RANGE,  16.0);
+    }
+
+    private double getDistanceToGround() {
+        BlockPos pos = blockPosition();
+        for (int dy = 0; dy <= 3; dy++) {
+            BlockPos check = pos.below(dy);
+            BlockState bs = level().getBlockState(check);
+            if (!bs.isAir() && bs.isSolid()) {
+                double blockTop = check.getY() + 1.0;
+                double entityFeet = getY();
+                return entityFeet - blockTop;
+            }
+        }
+        return 999.0;
     }
 
     @Override
     protected void registerGoals() {
+        goalSelector.addGoal(0, new Goal() {
+            private Player nearPlayer = null;
+            @Override public boolean canUse() {
+                if (level().isClientSide) return false;
+                nearPlayer = level().getNearestPlayer(OwlEntity.this, 2.0);
+                if (nearPlayer == null) return false;
+                return !nearPlayer.isCreative() && !nearPlayer.isSpectator();
+            }
+            @Override public boolean canContinueToUse() {
+                return nearPlayer != null && nearPlayer.isAlive()
+                        && !nearPlayer.isCreative() && !nearPlayer.isSpectator()
+                        && distanceTo(nearPlayer) < 6.0;
+            }
+            @Override public void start() { applyFleeImpulse(); }
+            @Override public void tick()  {
+                if (nearPlayer != null && distanceTo(nearPlayer) < 6.0)
+                    applyFleeImpulse();
+            }
+            private void applyFleeImpulse() {
+                if (nearPlayer == null) return;
+                double dx = getX() - nearPlayer.getX();
+                double dz = getZ() - nearPlayer.getZ();
+                double len = Math.sqrt(dx * dx + dz * dz);
+                if (len > 0)
+                    setDeltaMovement(dx / len * 0.5, 0.35, dz / len * 0.5);
+            }
+        });
+
         goalSelector.addGoal(1, new OwlFlyToTreeGoal(this));
-        goalSelector.addGoal(2, new RandomLookAroundGoal(this));
-        goalSelector.addGoal(3, new LookAtPlayerGoal(this, Player.class, 6.0f));
+
+        goalSelector.addGoal(2, new Goal() {
+            private int moveTimer = 0;
+            @Override public boolean canUse() {
+                return walkDuration > 0 && distToGround <= LANDED_THRESHOLD;
+            }
+            @Override public boolean canContinueToUse() {
+                return walkDuration > 0 && distToGround <= LANDED_THRESHOLD;
+            }
+            @Override public void start() { moveTimer = 0; }
+            @Override public void tick() {
+                moveTimer++;
+                if (moveTimer % 20 == 0) {
+                    double angle = random.nextDouble() * Math.PI * 2;
+                    setDeltaMovement(
+                            Math.cos(angle) * 0.12,
+                            getDeltaMovement().y,
+                            Math.sin(angle) * 0.12);
+                }
+            }
+        });
+
+        goalSelector.addGoal(3, new RandomLookAroundGoal(this));
+        goalSelector.addGoal(4, new LookAtPlayerGoal(this, Player.class, 6.0f));
     }
 
     @Override
     public void tick() {
         super.tick();
-        if (!level().isClientSide) {
-            Player nearest = level().getNearestPlayer(this, 2.0);
-            if (nearest != null && !nearest.isCreative() && !nearest.isSpectator()) {
-                double dx = getX() - nearest.getX();
-                double dz = getZ() - nearest.getZ();
-                double len = Math.sqrt(dx * dx + dz * dz);
-                if (len > 0) {
-                    setDeltaMovement(dx / len * 0.4, 0.3, dz / len * 0.4);
-                    setNoGravity(true);
-                }
-            }
 
-            if (random.nextInt(400) == 0) {
-                level().playSound(null, blockPosition(),
-                        ModSounds.OWL_HOOT.get(), SoundSource.NEUTRAL, 0.8f, 1.0f);
+        if (hurtAnimTimer > 0) hurtAnimTimer--;
+
+        distToGround = getDistanceToGround();
+        boolean isLanded = distToGround <= LANDED_THRESHOLD;
+
+        if (!isLanded) {
+            Vec3 mov = getDeltaMovement();
+            if (mov.y > -0.08) {
+                setDeltaMovement(mov.x, mov.y - 0.02, mov.z);
+            }
+        } else {
+            Vec3 mov = getDeltaMovement();
+            if (mov.y < 0) {
+                setDeltaMovement(mov.x, 0, mov.z);
             }
         }
+
+        if (level().isClientSide) return;
+        if (!isAlive()) return;
+
+        hootCooldown--;
+        if (hootCooldown <= 0) {
+            triggerAnim("events", "hoot");
+            hootCooldown = HOOT_INTERVAL + random.nextInt(400);
+        }
+
+        if (walkDuration > 0) walkDuration--;
+        walkTimer++;
+        if (walkTimer >= WALK_INTERVAL && walkDuration == 0 && isLanded) {
+            walkTimer    = 0;
+            walkDuration = WALK_MAX;
+        }
+
+        entityData.set(IS_FLYING, !isLanded);
+
+        boolean actuallyWalking = isLanded
+                && walkDuration > 0
+                && (Math.abs(getDeltaMovement().x) > 0.01
+                || Math.abs(getDeltaMovement().z) > 0.01);
+        entityData.set(IS_WALKING,   actuallyWalking);
+        entityData.set(IS_HURT_ANIM, hurtAnimTimer > 0);
     }
 
     @Override
     public boolean hurt(DamageSource src, float dmg) {
         boolean h = super.hurt(src, dmg);
-        if (h) triggerAnim("events", "hurt");
+        if (h) {
+            hurtAnimTimer = HURT_ANIM_DURATION;
+            triggerAnim("events", "hurt");
+        }
         return h;
     }
 
-    // ---- GeckoLib ----
+    @Override
+    protected void dropCustomDeathLoot(DamageSource src, int loot, boolean recent) {
+        spawnAtLocation(new ItemStack(Items.FEATHER, 1 + random.nextInt(3)));
+    }
+
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar registrar) {
-        registrar.add(new AnimationController<>(this, "main", 5, state -> {
-            if (isNoGravity() || getDeltaMovement().y != 0 && !onGround())
-                return state.setAndContinue(RawAnimation.begin().thenLoop("animation.owl.fly"));
-            if (getDeltaMovement().horizontalDistanceSqr() > 0.001)
-                return state.setAndContinue(RawAnimation.begin().thenLoop("animation.owl.walk"));
-            return state.setAndContinue(RawAnimation.begin().thenLoop("animation.owl.idle"));
+        registrar.add(new AnimationController<>(this, "main", 2, state -> {
+            if (!isAlive())
+                return state.setAndContinue(
+                        RawAnimation.begin().thenLoop("animation.owl.idle"));
+
+            if (isHurtAnim())
+                return state.setAndContinue(
+                        RawAnimation.begin().thenLoop("animation.owl.idle"));
+
+            if (isFlying())
+                return state.setAndContinue(
+                        RawAnimation.begin().thenLoop("animation.owl.fly"));
+
+            if (isWalking())
+                return state.setAndContinue(
+                        RawAnimation.begin().thenLoop("animation.owl.walk"));
+
+            if (tickCount % 600 < 300)
+                return state.setAndContinue(
+                        RawAnimation.begin().thenLoop("animation.owl.idle"));
+            return state.setAndContinue(
+                    RawAnimation.begin().thenLoop("animation.owl.idle2"));
         }));
+
         registrar.add(new AnimationController<>(this, "events", 0, state -> PlayState.STOP)
-                .triggerableAnim("hurt", RawAnimation.begin().thenPlay("animation.owl.hurt")));
+                .triggerableAnim("hurt",
+                        RawAnimation.begin().thenPlay("animation.owl.hurt"))
+                .triggerableAnim("hoot",
+                        RawAnimation.begin().thenPlay("animation.owl.idle")));
     }
 
     @Override

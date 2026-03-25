@@ -1,0 +1,10 @@
+{
+  "type": "forge:add_spawns",
+  "biomes": [
+    "minecraft:river",
+    "minecraft:frozen_river"
+  ],
+  "spawners": [
+    { "type": "wildcraft:brook_trout", "weight": 12, "minCount": 3, "maxCount": 8 }
+  ]
+}

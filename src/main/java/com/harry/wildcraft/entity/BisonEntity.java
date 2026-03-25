@@ -6,11 +6,9 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.AgeableMob;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.AvoidEntityGoal;
@@ -21,6 +19,7 @@ import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.ServerLevelAccessor;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.core.animation.AnimatableManager;
@@ -35,11 +34,11 @@ public class BisonEntity extends Animal implements GeoEntity {
 
     public static final EntityDataAccessor<Boolean> IS_LEAD =
             SynchedEntityData.defineId(BisonEntity.class, EntityDataSerializers.BOOLEAN);
+    public static final EntityDataAccessor<Boolean> IS_ATTACKING =
+            SynchedEntityData.defineId(BisonEntity.class, EntityDataSerializers.BOOLEAN);
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
-
-    private boolean isAttacking     = false;
-    private int     attackAnimTimer = 0;
+    private int attackAnimTimer = 0;
     private static final int ATTACK_ANIM_DURATION = 25;
     private int deathTimer = 0;
     private static final int DEATH_DELAY = 60;
@@ -51,12 +50,13 @@ public class BisonEntity extends Animal implements GeoEntity {
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
-        entityData.define(IS_LEAD, false);
+        entityData.define(IS_LEAD,      false);
+        entityData.define(IS_ATTACKING, false);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
         return Mob.createMobAttributes()
-                .add(Attributes.MAX_HEALTH,          40.0)
+                .add(Attributes.MAX_HEALTH,          20.0)
                 .add(Attributes.MOVEMENT_SPEED,       0.28)
                 .add(Attributes.ATTACK_DAMAGE,        16.0)
                 .add(Attributes.FOLLOW_RANGE,         50.0)
@@ -79,6 +79,8 @@ public class BisonEntity extends Animal implements GeoEntity {
 
     public boolean isLead() { return entityData.get(IS_LEAD); }
     public void setLead(boolean v) { entityData.set(IS_LEAD, v); }
+    public boolean isAttackingAnim() { return entityData.get(IS_ATTACKING); }
+    public void setAttackingAnim(boolean v) { entityData.set(IS_ATTACKING, v); }
 
     @Override
     public void tick() {
@@ -91,7 +93,7 @@ public class BisonEntity extends Animal implements GeoEntity {
         }
         if (attackAnimTimer > 0) {
             attackAnimTimer--;
-            if (attackAnimTimer == 0) isAttacking = false;
+            if (attackAnimTimer == 0) setAttackingAnim(false);
         }
     }
 
@@ -99,9 +101,9 @@ public class BisonEntity extends Animal implements GeoEntity {
     public boolean doHurtTarget(Entity target) {
         boolean hit = super.doHurtTarget(target);
         if (hit) {
-            isAttacking     = false;
+            setAttackingAnim(false);
             attackAnimTimer = 0;
-            isAttacking     = true;
+            setAttackingAnim(true);
             attackAnimTimer = ATTACK_ANIM_DURATION;
         }
         return hit;
@@ -124,6 +126,33 @@ public class BisonEntity extends Animal implements GeoEntity {
         }
     }
 
+    @Override @Nullable
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance diff,
+                                        MobSpawnType spawnType, @Nullable SpawnGroupData spawnData,
+                                        @Nullable net.minecraft.nbt.CompoundTag tag) {
+        spawnData = super.finalizeSpawn(level, diff, spawnType, spawnData, tag);
+        setLead(true);
+        if (spawnType != MobSpawnType.SPAWNER && spawnType != MobSpawnType.SPAWN_EGG
+                && spawnType != MobSpawnType.CHUNK_GENERATION
+                && spawnType != MobSpawnType.STRUCTURE
+                && level instanceof ServerLevel sl) {
+            int groupSize = 2 + random.nextInt(6);
+            for (int i = 0; i < groupSize; i++) {
+                BisonEntity companion = new BisonEntity(
+                        com.harry.wildcraft.init.ModEntities.BISON.get(), sl);
+                companion.setLead(false);
+                double nx = getX() + (random.nextDouble() - 0.5) * 12;
+                double nz = getZ() + (random.nextDouble() - 0.5) * 12;
+                if (sl.hasChunk((int)nx >> 4, (int)nz >> 4)) {
+                    companion.moveTo(nx, getY(), nz, random.nextFloat() * 360, 0);
+                    companion.finalizeSpawn(level, diff, MobSpawnType.SPAWNER, null, null);
+                    sl.addFreshEntity(companion);
+                }
+            }
+        }
+        return spawnData;
+    }
+
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(ServerLevel level, AgeableMob other) { return null; }
@@ -132,16 +161,18 @@ public class BisonEntity extends Animal implements GeoEntity {
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar registrar) {
         registrar.add(new AnimationController<>(this, "main", 3, state -> {
+            boolean moving = getDeltaMovement().horizontalDistanceSqr() > 0.001
+                    || getNavigation().isInProgress();
             if (!isAlive())
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.bison.death"));
-            if (isAttacking)
+            if (isAttackingAnim())
                 return state.setAndContinue(
                         RawAnimation.begin().thenPlay("animation.bison.attack"));
-            if (isAggressive() && getNavigation().isInProgress())
+            if (isAggressive() && moving)
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.bison.sprint"));
-            if (getNavigation().isInProgress())
+            if (moving)
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.bison.walk"));
             return state.setAndContinue(

@@ -1,0 +1,12 @@
+{
+  "type": "forge:add_spawns",
+  "biomes": [
+    "minecraft:desert",
+    "minecraft:badlands",
+    "minecraft:wooded_badlands",
+    "minecraft:eroded_badlands"
+  ],
+  "spawners": [
+    { "type": "wildcraft:gila_monster", "weight": 8, "minCount": 1, "maxCount": 1 }
+  ]
+}

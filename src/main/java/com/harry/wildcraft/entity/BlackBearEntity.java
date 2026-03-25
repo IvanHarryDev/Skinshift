@@ -16,6 +16,8 @@ import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
@@ -49,7 +51,7 @@ public class BlackBearEntity extends Animal implements GeoEntity {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Mob.createMobAttributes()
-                .add(Attributes.MAX_HEALTH,    40.0)
+                .add(Attributes.MAX_HEALTH,    20.0)
                 .add(Attributes.MOVEMENT_SPEED, 0.28)
                 .add(Attributes.ATTACK_DAMAGE, 12.0)
                 .add(Attributes.FOLLOW_RANGE,  30.0);
@@ -158,6 +160,12 @@ public class BlackBearEntity extends Animal implements GeoEntity {
     }
 
     @Override
+    protected void dropCustomDeathLoot(DamageSource src, int loot, boolean recent) {
+        int amount = 1 + random.nextInt(3);
+        spawnAtLocation(new ItemStack(Items.MUTTON, amount));
+    }
+
+    @Override
     public void die(DamageSource src) { super.die(src); }
 
     @Nullable
@@ -168,6 +176,8 @@ public class BlackBearEntity extends Animal implements GeoEntity {
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar registrar) {
         registrar.add(new AnimationController<>(this, "main", 3, state -> {
+            boolean moving = getDeltaMovement().horizontalDistanceSqr() > 0.001
+                    || getNavigation().isInProgress();
             if (!isAlive())
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.black_bear.death"));
@@ -177,10 +187,10 @@ public class BlackBearEntity extends Animal implements GeoEntity {
             if (isSitting)
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.black_bear.sit"));
-            if (combatTimer > 0 && getNavigation().isInProgress())
+            if (combatTimer > 0 && moving)
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.black_bear.sprint"));
-            if (getNavigation().isInProgress())
+            if (moving)
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.black_bear.walk"));
             return state.setAndContinue(

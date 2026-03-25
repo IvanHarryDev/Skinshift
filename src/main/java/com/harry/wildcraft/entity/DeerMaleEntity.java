@@ -161,17 +161,19 @@ public class DeerMaleEntity extends Animal implements GeoEntity {
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar registrar) {
         registrar.add(new AnimationController<>(this, "main", 3, state -> {
+            boolean moving = getDeltaMovement().horizontalDistanceSqr() > 0.001
+                    || getNavigation().isInProgress();
             if (!isAlive())
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.deer.death"));
-            if (!onGround() && getNavigation().isInProgress()
+            if (!onGround() && moving
                     && getDeltaMovement().horizontalDistanceSqr() > 0.04)
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.deer.sprint_jump"));
-            if (getNavigation().isInProgress() && isAggressive())
+            if (moving && getDeltaMovement().horizontalDistanceSqr() > 0.008)
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.deer.sprint"));
-            if (getNavigation().isInProgress())
+            if (moving)
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.deer.walk"));
             if (tickCount % 600 < 60)

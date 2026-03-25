@@ -15,14 +15,14 @@ import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache
 import software.bernie.geckolib.core.animation.AnimatableManager;
 import software.bernie.geckolib.core.animation.AnimationController;
 import software.bernie.geckolib.core.animation.RawAnimation;
-import software.bernie.geckolib.core.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 public class BrookTroutEntity extends AbstractFish implements GeoEntity {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
-    private int escapeTimer = 0;
-    private static final int ESCAPE_DURATION = 40;
+    private int hurtTimer = 0;
+    private static final int HURT_GRACE = 20;
+
     private int deathTimer = 0;
     private static final int DEATH_DELAY = 40;
 
@@ -39,7 +39,9 @@ public class BrookTroutEntity extends AbstractFish implements GeoEntity {
     protected SoundEvent getFlopSound() { return SoundEvents.COD_FLOP; }
 
     @Override
-    public ItemStack getBucketItemStack() { return new ItemStack(net.minecraft.world.item.Items.COD_BUCKET); }
+    public ItemStack getBucketItemStack() {
+        return new ItemStack(net.minecraft.world.item.Items.COD_BUCKET);
+    }
 
     @Override
     protected void dropCustomDeathLoot(DamageSource src, int loot, boolean recent) {
@@ -55,46 +57,32 @@ public class BrookTroutEntity extends AbstractFish implements GeoEntity {
             if (deathTimer < DEATH_DELAY) setPersistenceRequired();
             return;
         }
-        if (escapeTimer > 0) {
-            escapeTimer--;
-            if (isInWater() && escapeTimer % 5 == 0) {
-                double angle = random.nextDouble() * Math.PI * 2;
-                setDeltaMovement(
-                        Math.cos(angle) * 0.5,
-                        getDeltaMovement().y,
-                        Math.sin(angle) * 0.5);
-            }
-        }
+        if (hurtTimer > 0) hurtTimer--;
     }
 
     @Override
     public boolean hurt(DamageSource src, float dmg) {
         boolean h = super.hurt(src, dmg);
-        if (h && isInWater()) {
-            escapeTimer = ESCAPE_DURATION;
-        }
-        if (h) triggerAnim("events", "death");
+        if (h) hurtTimer = HURT_GRACE;
         return h;
     }
 
     @Override
-    public void die(DamageSource src) {
-        super.die(src);
-        triggerAnim("events", "death");
-    }
+    public void die(DamageSource src) { super.die(src); }
 
     // ---- GeckoLib ----
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar registrar) {
         registrar.add(new AnimationController<>(this, "main", 2, state -> {
             if (!isAlive())
-                return state.setAndContinue(RawAnimation.begin().thenPlay("animation.brook_trout.death"));
-            if (!isInWater())
-                return state.setAndContinue(RawAnimation.begin().thenLoop("animation.brook_trout.flapping"));
-            return state.setAndContinue(RawAnimation.begin().thenLoop("animation.brook_trout.swim"));
+                return state.setAndContinue(
+                        RawAnimation.begin().thenLoop("animation.brook_trout.death"));
+            if (!isInWater() && hurtTimer == 0)
+                return state.setAndContinue(
+                        RawAnimation.begin().thenLoop("animation.brook_trout.flapping"));
+            return state.setAndContinue(
+                    RawAnimation.begin().thenLoop("animation.brook_trout.swim"));
         }));
-        registrar.add(new AnimationController<>(this, "events", 0, state -> PlayState.STOP)
-                .triggerableAnim("death", RawAnimation.begin().thenPlay("animation.brook_trout.death")));
     }
 
     @Override

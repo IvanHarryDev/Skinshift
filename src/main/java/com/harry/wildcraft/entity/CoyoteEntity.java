@@ -2,12 +2,13 @@ package com.harry.wildcraft.entity;
 
 import com.harry.wildcraft.entity.goal.CoyotePackAttackGoal;
 import com.harry.wildcraft.entity.goal.CoyoteStalkGoal;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.AgeableMob;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
@@ -18,6 +19,7 @@ import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.ServerLevelAccessor;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.core.animation.AnimatableManager;
@@ -34,6 +36,10 @@ public class CoyoteEntity extends Animal implements GeoEntity {
     private PackState packState = PackState.IDLE;
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+    public static final EntityDataAccessor<Boolean> IS_CHASING =
+            SynchedEntityData.defineId(CoyoteEntity.class, EntityDataSerializers.BOOLEAN);
+    public boolean isChasing() { return entityData.get(IS_CHASING); }
+    public void setChasing(boolean v) { entityData.set(IS_CHASING, v); }
 
     private int howlCooldown = 400;
     private static final int HOWL_INTERVAL  = 1200;
@@ -91,8 +97,9 @@ public class CoyoteEntity extends Animal implements GeoEntity {
         }
 
         if (getAttribute(Attributes.MOVEMENT_SPEED) != null) {
-            getAttribute(Attributes.MOVEMENT_SPEED)
-                    .setBaseValue(packState == PackState.ATTACKING ? 0.28 : 0.22);
+            boolean chasing = getTarget() != null && getTarget().isAlive();
+            double speed = (packState == PackState.ATTACKING || chasing) ? 0.32 : 0.22;
+            getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(speed);
         }
 
         if (packState == PackState.ATTACKING
@@ -116,6 +123,9 @@ public class CoyoteEntity extends Animal implements GeoEntity {
                 }
             }
         }
+
+        boolean hasTarget = getTarget() != null && getTarget().isAlive();
+        setChasing(hasTarget || packState == PackState.ATTACKING);
     }
 
     @Override
@@ -141,6 +151,41 @@ public class CoyoteEntity extends Animal implements GeoEntity {
     }
 
     @Override
+    protected void defineSynchedData() {
+        super.defineSynchedData();
+        entityData.define(IS_CHASING, false);
+    }
+
+    @Override
+    @Nullable
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance diff,
+                                        MobSpawnType spawnType, @Nullable SpawnGroupData spawnData,
+                                        @Nullable net.minecraft.nbt.CompoundTag tag) {
+        spawnData = super.finalizeSpawn(level, diff, spawnType, spawnData, tag);
+
+        if (spawnType != MobSpawnType.SPAWNER
+                && spawnType != MobSpawnType.SPAWN_EGG
+                && spawnType != MobSpawnType.CHUNK_GENERATION
+                && spawnType != MobSpawnType.STRUCTURE
+                && level instanceof ServerLevel sl) {
+
+            int groupSize = 2 + random.nextInt(4);
+            for (int i = 0; i < groupSize; i++) {
+                CoyoteEntity companion = new CoyoteEntity(
+                        com.harry.wildcraft.init.ModEntities.COYOTE.get(), sl);
+                double nx = getX() + (random.nextDouble() - 0.5) * 10;
+                double nz = getZ() + (random.nextDouble() - 0.5) * 10;
+                if (sl.hasChunk((int)nx >> 4, (int)nz >> 4)) {
+                    companion.moveTo(nx, getY(), nz, random.nextFloat() * 360, 0);
+                    companion.finalizeSpawn(level, diff, MobSpawnType.SPAWNER, null, null);
+                    sl.addFreshEntity(companion);
+                }
+            }
+        }
+        return spawnData;
+    }
+
+    @Override
     public void die(DamageSource src) { super.die(src); }
 
     @Nullable
@@ -151,23 +196,22 @@ public class CoyoteEntity extends Animal implements GeoEntity {
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar registrar) {
         registrar.add(new AnimationController<>(this, "main", 3, state -> {
+            boolean moving = getDeltaMovement().horizontalDistanceSqr() > 0.001
+                    || getNavigation().isInProgress();
             if (!isAlive())
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.coyote.death"));
-
-            if (packState == PackState.ATTACKING && getNavigation().isInProgress()) {
+            if (isChasing() && moving) {
                 state.getController().setAnimationSpeed(1.0);
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.coyote.sprint"));
             }
-
-            if (packState == PackState.STALKING && getNavigation().isInProgress()) {
+            if (packState == PackState.STALKING && moving) {
                 state.getController().setAnimationSpeed(1.0);
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.coyote.stalk"));
             }
-
-            if (getNavigation().isInProgress()) {
+            if (moving) {
                 state.getController().setAnimationSpeed(1.4);
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.coyote.walk"));

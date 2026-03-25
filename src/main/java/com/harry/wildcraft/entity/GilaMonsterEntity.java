@@ -123,13 +123,15 @@ public class GilaMonsterEntity extends Animal implements GeoEntity {
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar registrar) {
         registrar.add(new AnimationController<>(this, "main", 3, state -> {
+            boolean moving = getDeltaMovement().horizontalDistanceSqr() > 0.001
+                    || getNavigation().isInProgress();
             if (!isAlive())
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.gila_monster.death"));
-            if (combatTimer > 0 && getNavigation().isInProgress())
+            if (combatTimer > 0 && moving)
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.gila_monster.run"));
-            if (getNavigation().isInProgress())
+            if (moving)
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.gila_monster.walk"));
             return state.setAndContinue(

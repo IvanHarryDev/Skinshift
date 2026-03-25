@@ -12,14 +12,14 @@ public class ModBlockEntities {
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
             DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, WildCraftMod.MOD_ID);
 
-    public static final RegistryObject<BlockEntityType<TrapBlockEntity>> TRAP =
-            BLOCK_ENTITIES.register("trap",
+    public static final RegistryObject<BlockEntityType<TrapBlockEntity>> TRAP_BLOCK_ENTITY =
+            BLOCK_ENTITIES.register("trap_block_entity",
                     () -> BlockEntityType.Builder
                             .of(TrapBlockEntity::new, ModBlocks.TRAP_BLOCK.get())
                             .build(null));
 
-    public static final RegistryObject<BlockEntityType<TipiBlockEntity>> TIPI =
-            BLOCK_ENTITIES.register("tipi",
+    public static final RegistryObject<BlockEntityType<TipiBlockEntity>> TIPI_BLOCK_ENTITY =
+            BLOCK_ENTITIES.register("tipi_block_entity",
                     () -> BlockEntityType.Builder
                             .of(TipiBlockEntity::new, ModBlocks.TIPI.get())
                             .build(null));

@@ -14,7 +14,7 @@ public class OwlModel extends GeoModel<OwlEntity> {
     @Override
     public ResourceLocation getTextureResource(OwlEntity e) {
         return ResourceLocation.fromNamespaceAndPath(
-                WildCraftMod.MOD_ID, "textures/entity/owl.png");
+                WildCraftMod.MOD_ID, "textures/entity/.png");
     }
     @Override
     public ResourceLocation getAnimationResource(OwlEntity e) {

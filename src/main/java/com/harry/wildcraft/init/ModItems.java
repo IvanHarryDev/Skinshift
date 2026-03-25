@@ -1,7 +1,6 @@
 package com.harry.wildcraft.init;
 
 import com.harry.wildcraft.WildCraftMod;
-import com.harry.wildcraft.item.BrookTroutItem;
 import com.harry.wildcraft.item.TrapItem;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -20,7 +19,11 @@ public class ModItems {
 
     public static final RegistryObject<Item> BROOK_TROUT =
             ITEMS.register("brook_trout",
-                    () -> new BrookTroutItem(new Item.Properties()));
+                    () -> new Item(new Item.Properties()
+                            .food(new net.minecraft.world.food.FoodProperties.Builder()
+                                    .nutrition(1)
+                                    .saturationMod(0.1f)
+                                    .build())));
 
     public static final RegistryObject<Item> TIPI_ITEM =
             ITEMS.register("tipi",
