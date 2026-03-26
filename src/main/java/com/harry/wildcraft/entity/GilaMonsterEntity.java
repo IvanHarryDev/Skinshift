@@ -7,10 +7,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
-import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
-import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
-import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
+import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.animal.Animal;
@@ -29,8 +26,10 @@ import javax.annotation.Nullable;
 public class GilaMonsterEntity extends Animal implements GeoEntity {
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+
     private int combatTimer = 0;
-    private static final int COMBAT_TIMEOUT = 100;
+    private static final int COMBAT_TIMEOUT = 100; // 5 s
+
     private int deathTimer = 0;
     private static final int DEATH_DELAY = 20;
 
@@ -43,15 +42,16 @@ public class GilaMonsterEntity extends Animal implements GeoEntity {
                 .add(Attributes.MAX_HEALTH,     6.0)
                 .add(Attributes.MOVEMENT_SPEED, 0.18)
                 .add(Attributes.ATTACK_DAMAGE,  2.0)
-                .add(Attributes.FOLLOW_RANGE,   16.0);
+                .add(Attributes.FOLLOW_RANGE,  16.0);
     }
 
     @Override
     protected void registerGoals() {
-        goalSelector.addGoal(0, new MeleeAttackGoal(this, 1.0, true));
-        goalSelector.addGoal(1, new WaterAvoidingRandomStrollGoal(this, 1.0));
-        goalSelector.addGoal(2, new LookAtPlayerGoal(this, Player.class, 4.0f));
-        goalSelector.addGoal(3, new RandomLookAroundGoal(this));
+        goalSelector.addGoal(0, new FloatGoal(this));
+        goalSelector.addGoal(1, new MeleeAttackGoal(this, 1.0, true));
+        goalSelector.addGoal(2, new WaterAvoidingRandomStrollGoal(this, 1.0));
+        goalSelector.addGoal(3, new LookAtPlayerGoal(this, Player.class, 4.0f));
+        goalSelector.addGoal(4, new RandomLookAroundGoal(this));
         targetSelector.addGoal(0, new HurtByTargetGoal(this));
         targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true,
                 e -> !((Player)e).isCreative() && e.distanceTo(this) <= 1.5));
@@ -79,9 +79,8 @@ public class GilaMonsterEntity extends Animal implements GeoEntity {
                     .setBaseValue(combatTimer > 0 ? 0.30 : 0.18);
         }
 
-        if (getTarget() instanceof Player p && distanceTo(p) > 15) {
+        if (getTarget() instanceof Player p && distanceTo(p) > 15)
             setTarget(null);
-        }
     }
 
     @Override
@@ -111,9 +110,7 @@ public class GilaMonsterEntity extends Animal implements GeoEntity {
     }
 
     @Override
-    public void die(DamageSource src) {
-        super.die(src);
-    }
+    public void die(DamageSource src) { super.die(src); }
 
     @Nullable
     @Override
@@ -123,20 +120,28 @@ public class GilaMonsterEntity extends Animal implements GeoEntity {
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar registrar) {
         registrar.add(new AnimationController<>(this, "main", 3, state -> {
-            boolean moving = getDeltaMovement().horizontalDistanceSqr() > 0.001
-                    || getNavigation().isInProgress();
             if (!isAlive())
                 return state.setAndContinue(
                         RawAnimation.begin().thenLoop("animation.gila_monster.death"));
-            if (combatTimer > 0 && moving)
-                return state.setAndContinue(
-                        RawAnimation.begin().thenLoop("animation.gila_monster.run"));
-            if (moving)
-                return state.setAndContinue(
-                        RawAnimation.begin().thenLoop("animation.gila_monster.walk"));
+
+            boolean moving = state.isMoving();
+
+            boolean isRunning = this.getAttributeValue(Attributes.MOVEMENT_SPEED) > 0.2;
+
+            if (moving) {
+                if (isRunning) {
+                    return state.setAndContinue(
+                            RawAnimation.begin().thenLoop("animation.gila_monster.run"));
+                } else {
+                    return state.setAndContinue(
+                            RawAnimation.begin().thenLoop("animation.gila_monster.walk"));
+                }
+            }
+
             return state.setAndContinue(
                     RawAnimation.begin().thenLoop("animation.gila_monster.idle"));
         }));
+
         registrar.add(new AnimationController<>(this, "events", 0, state -> PlayState.STOP)
                 .triggerableAnim("attack",
                         RawAnimation.begin().thenPlay("animation.gila_monster.attack"))

@@ -50,11 +50,12 @@ public class DeerMaleEntity extends Animal implements GeoEntity {
 
     @Override
     protected void registerGoals() {
-        goalSelector.addGoal(0, new DeerJumpGoal(this));
-        goalSelector.addGoal(1, new AvoidEntityGoal<>(this, Player.class,
+        goalSelector.addGoal(0, new FloatGoal(this));
+        goalSelector.addGoal(1, new DeerJumpGoal(this));
+        goalSelector.addGoal(2, new AvoidEntityGoal<>(this, Player.class,
                 e -> !((Player)e).isCreative() && !((Player)e).isSpectator(),
                 10.0f, 1.2, 1.4, e -> true));
-        goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.0, true) {
+        goalSelector.addGoal(3, new MeleeAttackGoal(this, 1.0, true) {
             @Override public boolean canUse() {
                 return counterTimer > 0 && !hasCounterAttacked && super.canUse();
             }
@@ -62,10 +63,10 @@ public class DeerMaleEntity extends Animal implements GeoEntity {
                 return counterTimer > 0 && !hasCounterAttacked && super.canContinueToUse();
             }
         });
-        goalSelector.addGoal(3, new EatBlockGoal(this));
-        goalSelector.addGoal(4, new WaterAvoidingRandomStrollGoal(this, 0.6));
-        goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 8.0f));
-        goalSelector.addGoal(6, new RandomLookAroundGoal(this));
+        goalSelector.addGoal(4, new EatBlockGoal(this));
+        goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 0.6));
+        goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 8.0f));
+        goalSelector.addGoal(7, new RandomLookAroundGoal(this));
         targetSelector.addGoal(0, new HurtByTargetGoal(this));
     }
 
@@ -161,32 +162,34 @@ public class DeerMaleEntity extends Animal implements GeoEntity {
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar registrar) {
         registrar.add(new AnimationController<>(this, "main", 3, state -> {
-            boolean moving = getDeltaMovement().horizontalDistanceSqr() > 0.001
-                    || getNavigation().isInProgress();
-            if (!isAlive())
-                return state.setAndContinue(
-                        RawAnimation.begin().thenLoop("animation.deer.death"));
-            if (!onGround() && moving
-                    && getDeltaMovement().horizontalDistanceSqr() > 0.04)
-                return state.setAndContinue(
-                        RawAnimation.begin().thenLoop("animation.deer.sprint_jump"));
-            if (moving && getDeltaMovement().horizontalDistanceSqr() > 0.008)
-                return state.setAndContinue(
-                        RawAnimation.begin().thenLoop("animation.deer.sprint"));
-            if (moving)
-                return state.setAndContinue(
-                        RawAnimation.begin().thenLoop("animation.deer.walk"));
-            if (tickCount % 600 < 60)
-                return state.setAndContinue(
-                        RawAnimation.begin().thenLoop("animation.deer.eat"));
-            return state.setAndContinue(
-                    RawAnimation.begin().thenLoop("animation.deer.idle"));
+            if (!isAlive()) {
+                return state.setAndContinue(RawAnimation.begin().thenLoop("animation.deer.death"));
+            }
+
+            if (state.isMoving()) {
+                double speedSq = getDeltaMovement().horizontalDistanceSqr();
+
+                if (!onGround() && speedSq > 0.04) {
+                    return state.setAndContinue(RawAnimation.begin().thenLoop("animation.deer.sprint_jump"));
+                }
+
+                if (speedSq > 0.015 || isAggressive()) {
+                    return state.setAndContinue(RawAnimation.begin().thenLoop("animation.deer.sprint"));
+                }
+
+                return state.setAndContinue(RawAnimation.begin().thenLoop("animation.deer.walk"));
+            }
+
+            if (tickCount % 600 < 60) {
+                return state.setAndContinue(RawAnimation.begin().thenLoop("animation.deer.eat"));
+            }
+
+            return state.setAndContinue(RawAnimation.begin().thenLoop("animation.deer.idle"));
         }));
+
         registrar.add(new AnimationController<>(this, "events", 0, state -> PlayState.STOP)
-                .triggerableAnim("attack",
-                        RawAnimation.begin().thenPlay("animation.deer.attack"))
-                .triggerableAnim("hurt",
-                        RawAnimation.begin().thenPlay("animation.deer.hurt")));
+                .triggerableAnim("attack", RawAnimation.begin().thenPlay("animation.deer.attack"))
+                .triggerableAnim("hurt", RawAnimation.begin().thenPlay("animation.deer.hurt")));
     }
 
     @Override

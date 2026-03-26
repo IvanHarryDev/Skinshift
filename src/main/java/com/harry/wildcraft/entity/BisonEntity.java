@@ -7,14 +7,12 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.DifficultyInstance;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.ai.goal.AvoidEntityGoal;
-import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
-import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
-import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
+import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
@@ -34,14 +32,21 @@ public class BisonEntity extends Animal implements GeoEntity {
 
     public static final EntityDataAccessor<Boolean> IS_LEAD =
             SynchedEntityData.defineId(BisonEntity.class, EntityDataSerializers.BOOLEAN);
-    public static final EntityDataAccessor<Boolean> IS_ATTACKING =
+    public static final EntityDataAccessor<Boolean> IS_SPRINTING_SYNC =
             SynchedEntityData.defineId(BisonEntity.class, EntityDataSerializers.BOOLEAN);
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
-    private int attackAnimTimer = 0;
-    private static final int ATTACK_ANIM_DURATION = 25;
-    private int deathTimer = 0;
+
+    private int combatTimer = 0;
+    private static final int COMBAT_TIMEOUT = 200;
     private static final int DEATH_DELAY = 60;
+
+    private static final RawAnimation WALK_ANIM = RawAnimation.begin().thenLoop("animation.bison.walk");
+    private static final RawAnimation SPRINT_ANIM = RawAnimation.begin().thenLoop("animation.bison.sprint");
+    private static final RawAnimation IDLE_ANIM = RawAnimation.begin().thenLoop("animation.bison.idle");
+    private static final RawAnimation DEATH_ANIM = RawAnimation.begin().thenPlay("animation.bison.death");
+    private static final RawAnimation HURT_ANIM = RawAnimation.begin().thenPlay("animation.bison.hurt");
+    private static final RawAnimation ATTACK_ANIM = RawAnimation.begin().thenPlay("animation.bison.attack");
 
     public BisonEntity(EntityType<? extends BisonEntity> type, Level level) {
         super(type, level);
@@ -50,13 +55,13 @@ public class BisonEntity extends Animal implements GeoEntity {
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
-        entityData.define(IS_LEAD,      false);
-        entityData.define(IS_ATTACKING, false);
+        entityData.define(IS_LEAD, false);
+        entityData.define(IS_SPRINTING_SYNC, false);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
         return Mob.createMobAttributes()
-                .add(Attributes.MAX_HEALTH,          20.0)
+                .add(Attributes.MAX_HEALTH,          40.0)
                 .add(Attributes.MOVEMENT_SPEED,       0.28)
                 .add(Attributes.ATTACK_DAMAGE,        16.0)
                 .add(Attributes.FOLLOW_RANGE,         50.0)
@@ -65,35 +70,52 @@ public class BisonEntity extends Animal implements GeoEntity {
 
     @Override
     protected void registerGoals() {
-        goalSelector.addGoal(0, new MeleeAttackGoal(this, 1.2, true) {
+        goalSelector.addGoal(0, new FloatGoal(this));
+        goalSelector.addGoal(1, new MeleeAttackGoal(this, 1.2, true) {
             @Override protected int getAttackInterval() { return 40; }
         });
-        goalSelector.addGoal(1, new BisonChargeGoal(this));
-        goalSelector.addGoal(2, new AvoidEntityGoal<>(this, Player.class, 20.0f, 0.5, 0.5,
+        goalSelector.addGoal(2, new BisonChargeGoal(this));
+        goalSelector.addGoal(3, new AvoidEntityGoal<>(this, Player.class, 20.0f, 0.5, 0.5,
                 e -> !((Player)e).isCreative() && !isAggressive()));
-        goalSelector.addGoal(3, new WaterAvoidingRandomStrollGoal(this, 0.5));
-        goalSelector.addGoal(4, new LookAtPlayerGoal(this, Player.class, 8.0f));
+        goalSelector.addGoal(4, new WaterAvoidingRandomStrollGoal(this, 0.5));
+        goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 8.0f));
         targetSelector.addGoal(0, new HurtByTargetGoal(this).setAlertOthers());
         targetSelector.addGoal(1, new BisonGroupLeaderGoal(this));
     }
 
-    public boolean isLead() { return entityData.get(IS_LEAD); }
+    public boolean isLead()        { return entityData.get(IS_LEAD); }
     public void setLead(boolean v) { entityData.set(IS_LEAD, v); }
-    public boolean isAttackingAnim() { return entityData.get(IS_ATTACKING); }
-    public void setAttackingAnim(boolean v) { entityData.set(IS_ATTACKING, v); }
 
     @Override
     public void tick() {
         super.tick();
         if (level().isClientSide) return;
-        if (!isAlive()) {
-            deathTimer++;
-            if (deathTimer < DEATH_DELAY) setPersistenceRequired();
-            return;
+
+        if (isAlive()) {
+            boolean hasTarget = getTarget() != null && getTarget().isAlive();
+            if (hasTarget) {
+                combatTimer = COMBAT_TIMEOUT;
+            } else if (combatTimer > 0) {
+                combatTimer--;
+            }
+
+            entityData.set(IS_SPRINTING_SYNC, combatTimer > 0);
         }
-        if (attackAnimTimer > 0) {
-            attackAnimTimer--;
-            if (attackAnimTimer == 0) setAttackingAnim(false);
+    }
+
+    @Override
+    protected void tickDeath() {
+        ++this.deathTime;
+        if (this.deathTime >= DEATH_DELAY) {
+            this.remove(Entity.RemovalReason.KILLED);
+        }
+    }
+
+    @Override
+    public void swing(InteractionHand hand, boolean updateSelf) {
+        super.swing(hand, updateSelf);
+        if (!level().isClientSide) {
+            triggerAnim("events", "attack");
         }
     }
 
@@ -101,10 +123,7 @@ public class BisonEntity extends Animal implements GeoEntity {
     public boolean doHurtTarget(Entity target) {
         boolean hit = super.doHurtTarget(target);
         if (hit) {
-            setAttackingAnim(false);
-            attackAnimTimer = 0;
-            setAttackingAnim(true);
-            attackAnimTimer = ATTACK_ANIM_DURATION;
+            combatTimer = COMBAT_TIMEOUT;
         }
         return hit;
     }
@@ -112,7 +131,12 @@ public class BisonEntity extends Animal implements GeoEntity {
     @Override
     public boolean hurt(DamageSource src, float dmg) {
         boolean h = super.hurt(src, dmg);
-        if (h) triggerAnim("events", "hurt");
+        if (h) {
+            combatTimer = COMBAT_TIMEOUT;
+            if (!level().isClientSide) {
+                triggerAnim("events", "hurt");
+            }
+        }
         return h;
     }
 
@@ -145,7 +169,6 @@ public class BisonEntity extends Animal implements GeoEntity {
                 double nz = getZ() + (random.nextDouble() - 0.5) * 12;
                 if (sl.hasChunk((int)nx >> 4, (int)nz >> 4)) {
                     companion.moveTo(nx, getY(), nz, random.nextFloat() * 360, 0);
-                    companion.finalizeSpawn(level, diff, MobSpawnType.SPAWNER, null, null);
                     sl.addFreshEntity(companion);
                 }
             }
@@ -160,27 +183,27 @@ public class BisonEntity extends Animal implements GeoEntity {
     // ---- GeckoLib ----
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar registrar) {
-        registrar.add(new AnimationController<>(this, "main", 3, state -> {
-            boolean moving = getDeltaMovement().horizontalDistanceSqr() > 0.001
-                    || getNavigation().isInProgress();
+        registrar.add(new AnimationController<>(this, "main", 5, state -> {
             if (!isAlive())
-                return state.setAndContinue(
-                        RawAnimation.begin().thenLoop("animation.bison.death"));
-            if (isAttackingAnim())
-                return state.setAndContinue(
-                        RawAnimation.begin().thenPlay("animation.bison.attack"));
-            if (isAggressive() && moving)
-                return state.setAndContinue(
-                        RawAnimation.begin().thenLoop("animation.bison.sprint"));
-            if (moving)
-                return state.setAndContinue(
-                        RawAnimation.begin().thenLoop("animation.bison.walk"));
-            return state.setAndContinue(
-                    RawAnimation.begin().thenLoop("animation.bison.idle"));
+                return state.setAndContinue(DEATH_ANIM);
+
+            boolean moving = state.getLimbSwingAmount() > 0.05F || state.isMoving();
+            boolean isSprinting = entityData.get(IS_SPRINTING_SYNC);
+
+            if (moving) {
+                if (isSprinting) {
+                    return state.setAndContinue(SPRINT_ANIM);
+                } else {
+                    return state.setAndContinue(WALK_ANIM);
+                }
+            }
+
+            return state.setAndContinue(IDLE_ANIM);
         }));
-        registrar.add(new AnimationController<>(this, "events", 0, state -> PlayState.STOP)
-                .triggerableAnim("hurt",
-                        RawAnimation.begin().thenPlay("animation.bison.hurt")));
+
+        registrar.add(new AnimationController<>(this, "events", 3, state -> PlayState.STOP)
+                .triggerableAnim("hurt", HURT_ANIM)
+                .triggerableAnim("attack", ATTACK_ANIM));
     }
 
     @Override

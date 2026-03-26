@@ -2,6 +2,7 @@ package com.harry.wildcraft.entity;
 
 import com.harry.wildcraft.entity.goal.OwlFlyToTreeGoal;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -19,6 +20,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.core.animation.AnimatableManager;
@@ -48,7 +50,8 @@ public class OwlEntity extends FlyingMob implements GeoEntity {
     private static final int WALK_MAX      = 60;
 
     private double distToGround = 999.0;
-    private static final double LANDED_THRESHOLD = 0.5;
+
+    private static final double LANDED_THRESHOLD = 0.05;
 
     public OwlEntity(EntityType<? extends OwlEntity> type, Level level) {
         super(type, level);
@@ -74,15 +77,31 @@ public class OwlEntity extends FlyingMob implements GeoEntity {
     }
 
     private double getDistanceToGround() {
-        BlockPos pos = blockPosition();
-        for (int dy = 0; dy <= 3; dy++) {
-            BlockPos check = pos.below(dy);
+        double feetY = getY();
+        int blockX = (int) Math.floor(getX());
+        int blockZ = (int) Math.floor(getZ());
+        int startBlockY = (int) Math.floor(feetY) + 1;
+
+        for (int dy = 0; dy <= 10; dy++) {
+            BlockPos check = new BlockPos(blockX, startBlockY - dy, blockZ);
             BlockState bs = level().getBlockState(check);
-            if (!bs.isAir() && bs.isSolid()) {
-                double blockTop = check.getY() + 1.0;
-                double entityFeet = getY();
-                return entityFeet - blockTop;
+            if (bs.isAir()) continue;
+            if (!bs.isSolid()) continue;
+
+            double shapeMaxY;
+            try {
+                VoxelShape shape = bs.getShape(level(), check);
+                if (shape.isEmpty()) continue;
+                shapeMaxY = shape.max(Direction.Axis.Y);
+                if (Double.isInfinite(shapeMaxY) || shapeMaxY <= 0.0) continue;
+            } catch (Exception e) {
+                shapeMaxY = 1.0;
             }
+
+            double blockTop = check.getY() + shapeMaxY;
+            if (blockTop > feetY + 0.5) continue;
+
+            return feetY - blockTop;
         }
         return 999.0;
     }
@@ -91,34 +110,47 @@ public class OwlEntity extends FlyingMob implements GeoEntity {
     protected void registerGoals() {
         goalSelector.addGoal(0, new Goal() {
             private Player nearPlayer = null;
-            @Override public boolean canUse() {
+            private BlockPos safeTreePos = null;
+
+            @Override
+            public boolean canUse() {
                 if (level().isClientSide) return false;
-                nearPlayer = level().getNearestPlayer(OwlEntity.this, 2.0);
-                if (nearPlayer == null) return false;
-                return !nearPlayer.isCreative() && !nearPlayer.isSpectator();
+                nearPlayer = level().getNearestPlayer(OwlEntity.this, 6.0);
+
+                if (nearPlayer == null || nearPlayer.isCreative() || nearPlayer.isSpectator()) return false;
+
+                safeTreePos = findEmergencyTree();
+                return safeTreePos != null;
             }
-            @Override public boolean canContinueToUse() {
-                return nearPlayer != null && nearPlayer.isAlive()
-                        && !nearPlayer.isCreative() && !nearPlayer.isSpectator()
-                        && distanceTo(nearPlayer) < 6.0;
+
+            @Override
+            public boolean canContinueToUse() {
+                return safeTreePos != null && !getNavigation().isDone() && nearPlayer != null && distanceTo(nearPlayer) < 15.0;
             }
-            @Override public void start() { applyFleeImpulse(); }
-            @Override public void tick()  {
-                if (nearPlayer != null && distanceTo(nearPlayer) < 6.0)
-                    applyFleeImpulse();
+
+            @Override
+            public void start() {
+                if (safeTreePos != null) {
+                    getNavigation().moveTo(safeTreePos.getX() + 0.5, safeTreePos.getY() + 1.0, safeTreePos.getZ() + 0.5, 1.5);
+                }
             }
-            private void applyFleeImpulse() {
-                if (nearPlayer == null) return;
-                double dx = getX() - nearPlayer.getX();
-                double dz = getZ() - nearPlayer.getZ();
-                double len = Math.sqrt(dx * dx + dz * dz);
-                if (len > 0)
-                    setDeltaMovement(dx / len * 0.5, 0.35, dz / len * 0.5);
+
+            private BlockPos findEmergencyTree() {
+                BlockPos owlPos = blockPosition();
+                for (int attempt = 0; attempt < 15; attempt++) {
+                    int dx = random.nextInt(30) - 15;
+                    int dy = random.nextInt(10) + 2;
+                    int dz = random.nextInt(30) - 15;
+                    BlockPos candidate = owlPos.offset(dx, dy, dz);
+
+                    if (level().getBlockState(candidate).is(net.minecraft.tags.BlockTags.LEAVES)) {
+                        return candidate;
+                    }
+                }
+                return null;
             }
         });
-
         goalSelector.addGoal(1, new OwlFlyToTreeGoal(this));
-
         goalSelector.addGoal(2, new Goal() {
             private int moveTimer = 0;
             @Override public boolean canUse() {
@@ -132,14 +164,11 @@ public class OwlEntity extends FlyingMob implements GeoEntity {
                 moveTimer++;
                 if (moveTimer % 20 == 0) {
                     double angle = random.nextDouble() * Math.PI * 2;
-                    setDeltaMovement(
-                            Math.cos(angle) * 0.12,
-                            getDeltaMovement().y,
+                    setDeltaMovement(Math.cos(angle) * 0.12, getDeltaMovement().y,
                             Math.sin(angle) * 0.12);
                 }
             }
         });
-
         goalSelector.addGoal(3, new RandomLookAroundGoal(this));
         goalSelector.addGoal(4, new LookAtPlayerGoal(this, Player.class, 6.0f));
     }
@@ -147,21 +176,24 @@ public class OwlEntity extends FlyingMob implements GeoEntity {
     @Override
     public void tick() {
         super.tick();
-
         if (hurtAnimTimer > 0) hurtAnimTimer--;
 
         distToGround = getDistanceToGround();
         boolean isLanded = distToGround <= LANDED_THRESHOLD;
 
-        if (!isLanded) {
+        if (isInWater()) {
             Vec3 mov = getDeltaMovement();
-            if (mov.y > -0.08) {
-                setDeltaMovement(mov.x, mov.y - 0.02, mov.z);
-            }
+            if (mov.y < 0.15)
+                setDeltaMovement(mov.x, mov.y + 0.06, mov.z);
+            isLanded = false;
         } else {
-            Vec3 mov = getDeltaMovement();
-            if (mov.y < 0) {
-                setDeltaMovement(mov.x, 0, mov.z);
+            if (!isLanded) {
+                Vec3 mov = getDeltaMovement();
+                if (mov.y > -0.08)
+                    setDeltaMovement(mov.x, mov.y - 0.02, mov.z);
+            } else {
+                Vec3 mov = getDeltaMovement();
+                if (mov.y < 0) setDeltaMovement(mov.x, 0, mov.z);
             }
         }
 
@@ -182,11 +214,8 @@ public class OwlEntity extends FlyingMob implements GeoEntity {
         }
 
         entityData.set(IS_FLYING, !isLanded);
-
-        boolean actuallyWalking = isLanded
-                && walkDuration > 0
-                && (Math.abs(getDeltaMovement().x) > 0.01
-                || Math.abs(getDeltaMovement().z) > 0.01);
+        boolean actuallyWalking = isLanded && walkDuration > 0
+                && (Math.abs(getDeltaMovement().x) > 0.01 || Math.abs(getDeltaMovement().z) > 0.01);
         entityData.set(IS_WALKING,   actuallyWalking);
         entityData.set(IS_HURT_ANIM, hurtAnimTimer > 0);
     }
@@ -194,10 +223,7 @@ public class OwlEntity extends FlyingMob implements GeoEntity {
     @Override
     public boolean hurt(DamageSource src, float dmg) {
         boolean h = super.hurt(src, dmg);
-        if (h) {
-            hurtAnimTimer = HURT_ANIM_DURATION;
-            triggerAnim("events", "hurt");
-        }
+        if (h) { hurtAnimTimer = HURT_ANIM_DURATION; triggerAnim("events", "hurt"); }
         return h;
     }
 
@@ -206,37 +232,25 @@ public class OwlEntity extends FlyingMob implements GeoEntity {
         spawnAtLocation(new ItemStack(Items.FEATHER, 1 + random.nextInt(3)));
     }
 
+    // ---- GeckoLib ----
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar registrar) {
         registrar.add(new AnimationController<>(this, "main", 2, state -> {
             if (!isAlive())
-                return state.setAndContinue(
-                        RawAnimation.begin().thenLoop("animation.owl.idle"));
-
+                return state.setAndContinue(RawAnimation.begin().thenLoop("animation.owl.idle"));
             if (isHurtAnim())
-                return state.setAndContinue(
-                        RawAnimation.begin().thenLoop("animation.owl.idle"));
-
+                return state.setAndContinue(RawAnimation.begin().thenLoop("animation.owl.idle"));
             if (isFlying())
-                return state.setAndContinue(
-                        RawAnimation.begin().thenLoop("animation.owl.fly"));
-
+                return state.setAndContinue(RawAnimation.begin().thenLoop("animation.owl.fly"));
             if (isWalking())
-                return state.setAndContinue(
-                        RawAnimation.begin().thenLoop("animation.owl.walk"));
-
+                return state.setAndContinue(RawAnimation.begin().thenLoop("animation.owl.walk"));
             if (tickCount % 600 < 300)
-                return state.setAndContinue(
-                        RawAnimation.begin().thenLoop("animation.owl.idle"));
-            return state.setAndContinue(
-                    RawAnimation.begin().thenLoop("animation.owl.idle2"));
+                return state.setAndContinue(RawAnimation.begin().thenLoop("animation.owl.idle"));
+            return state.setAndContinue(RawAnimation.begin().thenLoop("animation.owl.idle2"));
         }));
-
         registrar.add(new AnimationController<>(this, "events", 0, state -> PlayState.STOP)
-                .triggerableAnim("hurt",
-                        RawAnimation.begin().thenPlay("animation.owl.hurt"))
-                .triggerableAnim("hoot",
-                        RawAnimation.begin().thenPlay("animation.owl.idle")));
+                .triggerableAnim("hurt", RawAnimation.begin().thenPlay("animation.owl.hurt"))
+                .triggerableAnim("hoot", RawAnimation.begin().thenPlay("animation.owl.idle")));
     }
 
     @Override
