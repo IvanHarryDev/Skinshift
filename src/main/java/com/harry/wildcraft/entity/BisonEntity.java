@@ -156,6 +156,11 @@ public class BisonEntity extends Animal implements GeoEntity {
         return ModSounds.BISON_DEATH.get();
     }
 
+    @Override
+    protected float getSoundVolume() {
+        return 0.6f;
+    }
+
     // ---- GeckoLib ----
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar registrar) {

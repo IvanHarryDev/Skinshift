@@ -221,6 +221,10 @@ public class BlackBearEntity extends Animal implements GeoEntity {
         return ModSounds.BLACK_BEAR_DEATH.get();
     }
 
+    @Override
+    protected float getSoundVolume() {
+        return 0.6f;
+    }
 
     @Nullable
     @Override

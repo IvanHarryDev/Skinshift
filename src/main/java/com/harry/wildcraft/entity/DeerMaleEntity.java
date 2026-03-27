@@ -160,13 +160,20 @@ public class DeerMaleEntity extends Animal implements GeoEntity {
     protected SoundEvent getAmbientSound() {
         return ModSounds.DEER_IDLE.get();
     }
+
     @Override
     protected SoundEvent getHurtSound(DamageSource src) {
         return ModSounds.DEER_HURT.get();
     }
+
     @Override
     protected SoundEvent getDeathSound() {
         return ModSounds.DEER_DEATH.get();
+    }
+
+    @Override
+    protected float getSoundVolume() {
+        return 0.6f;
     }
 
     @Nullable

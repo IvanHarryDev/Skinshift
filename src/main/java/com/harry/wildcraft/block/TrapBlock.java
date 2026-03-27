@@ -34,7 +34,7 @@ public class TrapBlock extends Block implements EntityBlock {
             BooleanProperty.create("open");
 
     private static final VoxelShape SHAPE =
-            Shapes.box(0.0625, 0.0, 0.0625, 0.9375, 0.125, 0.9375);
+            Shapes.box(0.1, 0.01, 0.1, 0.9, 0.13, 0.9);
 
     public TrapBlock(Properties props) {
         super(props);
@@ -68,6 +68,17 @@ public class TrapBlock extends Block implements EntityBlock {
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new TrapBlockEntity(pos, state);
+    }
+
+    @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos,
+                         BlockState newState, boolean isMoving) {
+        if (!state.is(newState.getBlock())) {
+            if (level.getBlockEntity(pos) instanceof TrapBlockEntity trap) {
+                trap.release();
+            }
+        }
+        super.onRemove(state, level, pos, newState, isMoving);
     }
 
     @Nullable

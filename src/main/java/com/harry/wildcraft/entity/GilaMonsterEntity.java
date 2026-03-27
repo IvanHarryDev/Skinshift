@@ -116,9 +116,15 @@ public class GilaMonsterEntity extends Animal implements GeoEntity {
     protected SoundEvent getAmbientSound() {
         return ModSounds.GILA_MONSTER_IDLE.get();
     }
+
     @Override
     protected SoundEvent getDeathSound() {
         return ModSounds.GILA_MONSTER_DEATH.get();
+    }
+
+    @Override
+    protected float getSoundVolume() {
+        return 0.6f;
     }
 
     @Override

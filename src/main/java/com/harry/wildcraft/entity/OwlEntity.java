@@ -296,6 +296,7 @@ public class OwlEntity extends FlyingMob implements GeoEntity {
     protected SoundEvent getAmbientSound() {
         return ModSounds.OWL_IDLE.get();
     }
+
     @Override
     protected SoundEvent getHurtSound(DamageSource src) {
         return ModSounds.OWL_HURT.get();
@@ -303,6 +304,11 @@ public class OwlEntity extends FlyingMob implements GeoEntity {
     @Override
     protected SoundEvent getDeathSound() {
         return ModSounds.OWL_DEATH.get();
+    }
+
+    @Override
+    protected float getSoundVolume() {
+        return 0.6f;
     }
 
     // ---- GeckoLib ----

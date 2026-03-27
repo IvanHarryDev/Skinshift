@@ -1,7 +1,6 @@
 package com.harry.wildcraft.block;
 
 import com.harry.wildcraft.init.ModBlockEntities;
-import com.harry.wildcraft.init.ModSounds;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
@@ -28,8 +27,20 @@ public class TrapBlockEntity extends BlockEntity implements GeoBlockEntity {
     private UUID capturedEntityUUID  = null;
     private LivingEntity capturedEntityCache = null;
 
+    private boolean pendingSnapAnim = false;
+    private boolean pendingOpenAnim = false;
+
     public TrapBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.TRAP_BLOCK_ENTITY.get(), pos, state);
+    }
+
+    public boolean consumeSnapAnim() {
+        if (pendingSnapAnim) { pendingSnapAnim = false; return true; }
+        return false;
+    }
+    public boolean consumeOpenAnim() {
+        if (pendingOpenAnim) { pendingOpenAnim = false; return true; }
+        return false;
     }
 
     @Override
@@ -56,13 +67,14 @@ public class TrapBlockEntity extends BlockEntity implements GeoBlockEntity {
                 worldPosition.getY() + 0.1,
                 worldPosition.getZ() + 0.5);
         entity.setNoGravity(false);
-        triggerAnim("main", "snap");
+        pendingSnapAnim = true;
         if (level instanceof ServerLevel sl) {
-            sl.playSound(null,
-                    worldPosition,
-                    ModSounds.TRAP_SNAP.get(),
+            sl.playSound(null, worldPosition,
+                    com.harry.wildcraft.init.ModSounds.TRAP_SNAP.get(),
                     net.minecraft.sounds.SoundSource.BLOCKS,
-                    1.0f, 1.0f);
+                    0.8f, 0.9f + sl.random.nextFloat() * 0.2f);
+            level.sendBlockUpdated(worldPosition,
+                    getBlockState(), getBlockState(), 3);
         }
         setChanged();
     }
@@ -74,7 +86,11 @@ public class TrapBlockEntity extends BlockEntity implements GeoBlockEntity {
         }
         capturedEntityUUID  = null;
         capturedEntityCache = null;
-        triggerAnim("main", "open");
+        pendingOpenAnim = true;
+        if (level != null) {
+            level.sendBlockUpdated(worldPosition,
+                    getBlockState(), getBlockState(), 3);
+        }
         setChanged();
     }
 
@@ -97,7 +113,11 @@ public class TrapBlockEntity extends BlockEntity implements GeoBlockEntity {
                 if (!getBlockState().getValue(TrapBlock.OPEN)) {
                     level.setBlock(worldPosition,
                             getBlockState().setValue(TrapBlock.OPEN, true), 3);
-                    triggerAnim("main", "open");
+                    pendingOpenAnim = true;
+                    if (level != null) {
+                        level.sendBlockUpdated(worldPosition,
+                                getBlockState(), getBlockState(), 3);
+                    }
                 }
             }
             return;
@@ -113,6 +133,32 @@ public class TrapBlockEntity extends BlockEntity implements GeoBlockEntity {
             captured.addEffect(new MobEffectInstance(
                     MobEffects.MOVEMENT_SLOWDOWN,
                     Integer.MAX_VALUE, 255, false, false));
+        }
+    }
+
+    @Override
+    public net.minecraft.network.protocol.Packet<
+            net.minecraft.network.protocol.game.ClientGamePacketListener>
+    getUpdatePacket() {
+        return net.minecraft.network.protocol.game
+                .ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public net.minecraft.nbt.CompoundTag getUpdateTag() {
+        CompoundTag tag = super.getUpdateTag();
+        tag.putBoolean("SnapAnim", pendingSnapAnim);
+        tag.putBoolean("OpenAnim", pendingOpenAnim);
+        return tag;
+    }
+
+    @Override
+    public void handleUpdateTag(CompoundTag tag) {
+        if (tag.getBoolean("SnapAnim")) {
+            triggerAnim("main", "snap");
+        }
+        if (tag.getBoolean("OpenAnim")) {
+            triggerAnim("main", "open");
         }
     }
 

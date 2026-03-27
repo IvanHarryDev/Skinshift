@@ -360,6 +360,11 @@ public class CoyoteEntity extends Animal implements GeoEntity {
         return ModSounds.COYOTE_DEATH.get();
     }
 
+    @Override
+    protected float getSoundVolume() {
+        return 0.6f;
+    }
+
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(ServerLevel level, AgeableMob other) { return null; }

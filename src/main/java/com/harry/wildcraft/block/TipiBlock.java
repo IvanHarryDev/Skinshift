@@ -87,6 +87,11 @@ public class TipiBlock extends Block implements EntityBlock {
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter level,
                                BlockPos pos, CollisionContext ctx) {
-        return Shapes.block();
+        return switch (state.getValue(FACING)) {
+            case SOUTH -> SHAPE_SOUTH;
+            case EAST  -> SHAPE_EAST;
+            case WEST  -> SHAPE_WEST;
+            default    -> SHAPE_NORTH;
+        };
     }
 }

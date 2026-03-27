@@ -1,27 +1,30 @@
 package com.harry.wildcraft.init;
 
-import com.harry.wildcraft.WildCraftMod;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
+import static com.harry.wildcraft.WildCraftMod.MOD_ID;
 
 public class ModSounds {
     public static final DeferredRegister<SoundEvent> SOUNDS =
-            DeferredRegister.create(ForgeRegistries.SOUND_EVENTS, WildCraftMod.MOD_ID);
+            DeferredRegister.create(ForgeRegistries.SOUND_EVENTS, MOD_ID);
 
     public static final RegistryObject<SoundEvent> SKINWALKER_SCREAM =
             SOUNDS.register("skinwalker_scream",
-                    () -> SoundEvent.createVariableRangeEvent(
-                            ResourceLocation.fromNamespaceAndPath(
-                                    WildCraftMod.MOD_ID, "skinwalker.scream")));
+                    () -> SoundEvent.createFixedRangeEvent(
+                            ResourceLocation.fromNamespaceAndPath(MOD_ID, "skinwalker.scream"), 24.0f));
 
     public static final RegistryObject<SoundEvent> SKINWALKER_MORPH =
             SOUNDS.register("skinwalker_morph",
-                    () -> SoundEvent.createVariableRangeEvent(
-                            ResourceLocation.fromNamespaceAndPath(
-                                    WildCraftMod.MOD_ID, "skinwalker.morph")));
+                    () -> SoundEvent.createFixedRangeEvent(
+                            ResourceLocation.fromNamespaceAndPath(MOD_ID, "skinwalker.morph"), 16.0f));
+
+    public static final RegistryObject<SoundEvent> OWL_HOOT =
+            SOUNDS.register("owl_hoot",
+                    () -> SoundEvent.createFixedRangeEvent(
+                            ResourceLocation.fromNamespaceAndPath(MOD_ID, "owl.hoot"), 16.0f));
 
     // BISON
     public static final RegistryObject<SoundEvent> BISON_DEATH = reg("entity.bison.death");
@@ -59,9 +62,14 @@ public class ModSounds {
     public static final RegistryObject<SoundEvent> TRAP_SNAP = reg("block.trap.snap");
 
     private static RegistryObject<SoundEvent> reg(String name) {
-        return SOUNDS.register(name.replace('.', '_'),
-                () -> SoundEvent.createVariableRangeEvent(
-                        ResourceLocation.fromNamespaceAndPath(
-                                WildCraftMod.MOD_ID, name)));
+        return reg(name, 12.0f);
     }
+
+    private static RegistryObject<SoundEvent> reg(String name, float range) {
+        return SOUNDS.register(name.replace('.', '_'),
+                () -> SoundEvent.createFixedRangeEvent(
+                        ResourceLocation.fromNamespaceAndPath(MOD_ID, name),
+                        range));
+    }
+
 }
