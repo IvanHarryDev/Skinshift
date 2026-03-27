@@ -2,6 +2,7 @@ package com.harry.wildcraft.init;
 
 import com.harry.wildcraft.WildCraftMod;
 import com.harry.wildcraft.block.TipiBlock;
+import com.harry.wildcraft.block.TipiPartBlock;
 import com.harry.wildcraft.block.TrapBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -16,14 +17,23 @@ public class ModBlocks {
     public static final RegistryObject<Block> TRAP_BLOCK =
             BLOCKS.register("trap_block",
                     () -> new TrapBlock(BlockBehaviour.Properties.of()
-                            .strength(5.0f, 6.0f)
-                            .requiresCorrectToolForDrops()
+                            .strength(0.5f, 0.5f)
                             .noOcclusion()
-                            .noCollission()));
+                            .dynamicShape()
+                    ));
 
     public static final RegistryObject<Block> TIPI =
             BLOCKS.register("tipi",
                     () -> new TipiBlock(BlockBehaviour.Properties.of()
                             .strength(1.0f, 1.0f)
                             .noOcclusion()));
+
+    public static final RegistryObject<Block> TIPI_PART =
+            BLOCKS.register("tipi_part",
+                    () -> new TipiPartBlock(BlockBehaviour.Properties.of()
+                            .strength(1.0f, 2.0f)
+                            .noOcclusion()
+                            .dynamicShape()
+                            .noLootTable()
+                    ));
 }

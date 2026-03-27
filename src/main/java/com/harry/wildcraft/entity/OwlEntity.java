@@ -66,6 +66,9 @@ public class OwlEntity extends FlyingMob implements GeoEntity {
     private static final RawAnimation ANIM_IDLE  = RawAnimation.begin().thenLoop("animation.owl.idle");
     private static final RawAnimation ANIM_IDLE2 = RawAnimation.begin().thenLoop("animation.owl.idle2");
 
+    private int clientFlyTicks = 0;
+    private static final int FLY_REFRESH_INTERVAL = 100;
+
     public OwlEntity(EntityType<? extends OwlEntity> type, Level level) {
         super(type, level);
     }
@@ -245,9 +248,12 @@ public class OwlEntity extends FlyingMob implements GeoEntity {
         if (!isAlive()) return;
 
         hootCooldown--;
-        if (hootCooldown <= 0) {
+        if (hootCooldown <= 0 && landed) {
             triggerAnim("events", "hoot");
             hootCooldown = HOOT_INTERVAL + random.nextInt(400);
+        } else if (hootCooldown <= 0) {
+            // Reset cooldown but don't play while flying
+            hootCooldown = 200 + random.nextInt(200);
         }
 
         if (walkDuration > 0) walkDuration--;
@@ -301,6 +307,7 @@ public class OwlEntity extends FlyingMob implements GeoEntity {
     protected SoundEvent getHurtSound(DamageSource src) {
         return ModSounds.OWL_HURT.get();
     }
+
     @Override
     protected SoundEvent getDeathSound() {
         return ModSounds.OWL_DEATH.get();
@@ -314,14 +321,11 @@ public class OwlEntity extends FlyingMob implements GeoEntity {
     // ---- GeckoLib ----
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar registrar) {
-        AnimationController<OwlEntity> mainCtrl = new AnimationController<>(this, "main", 5, state -> {
+        AnimationController<OwlEntity> mainCtrl = new AnimationController<>(this, "main", 3, state -> {
             int current = getAnimState();
 
             if (!isAlive()) {
-                if (clientPrevAnimState != -99) {
-                    clientPrevAnimState = -99;
-                    state.getController().setAnimation(ANIM_IDLE);
-                }
+                state.getController().setAnimation(ANIM_IDLE);
                 return PlayState.CONTINUE;
             }
 
@@ -329,7 +333,19 @@ public class OwlEntity extends FlyingMob implements GeoEntity {
                 return PlayState.CONTINUE;
             }
 
-            if (current != clientPrevAnimState) {
+            if (current == STATE_FLY) {
+                clientFlyTicks++;
+            } else {
+                clientFlyTicks = 0;
+            }
+
+            boolean stateChanged = (current != clientPrevAnimState);
+
+            boolean forceRefresh = (current == STATE_FLY
+                    && clientFlyTicks > 0
+                    && clientFlyTicks % FLY_REFRESH_INTERVAL == 0);
+
+            if (stateChanged || forceRefresh) {
                 clientPrevAnimState = current;
                 switch (current) {
                     case STATE_FLY:
@@ -351,12 +367,11 @@ public class OwlEntity extends FlyingMob implements GeoEntity {
         });
 
         mainCtrl.setAnimation(ANIM_IDLE);
-
         registrar.add(mainCtrl);
 
         registrar.add(new AnimationController<>(this, "events", 0, state -> PlayState.STOP)
                 .triggerableAnim("hurt", RawAnimation.begin().thenPlay("animation.owl.hurt"))
-                .triggerableAnim("hoot", RawAnimation.begin().thenPlay("animation.owl.idle")));
+                .triggerableAnim("hoot", RawAnimation.begin().thenPlay("animation.owl.hoot")));
     }
 
     @Override

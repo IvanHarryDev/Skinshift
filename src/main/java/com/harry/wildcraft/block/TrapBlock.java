@@ -21,12 +21,17 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import com.harry.wildcraft.init.ModBlockEntities;
+import com.harry.wildcraft.init.ModBlocks;
+
 import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.List;
 
 public class TrapBlock extends Block implements EntityBlock {
 
@@ -64,6 +69,16 @@ public class TrapBlock extends Block implements EntityBlock {
         return RenderShape.ENTITYBLOCK_ANIMATED;
     }
 
+    @Override
+    public List<ItemStack> getDrops(BlockState state, LootParams.Builder builder) {
+        return Collections.singletonList(new ItemStack(ModBlocks.TRAP_BLOCK.get()));
+    }
+
+    @Override
+    public float getDestroyProgress(BlockState state, Player player, BlockGetter level, BlockPos pos) {
+        return 0.2f;
+    }
+
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
@@ -94,8 +109,10 @@ public class TrapBlock extends Block implements EntityBlock {
     public void entityInside(BlockState state, Level level,
                              BlockPos pos, Entity entity) {
         if (level.isClientSide) return;
-        if (!state.getValue(OPEN)) return; // ya está cerrada
+        if (!state.getValue(OPEN)) return;
         if (!(entity instanceof LivingEntity living)) return;
+
+        if (entity instanceof Player) return;
 
         level.setBlock(pos, state.setValue(OPEN, false), 3);
         if (level.getBlockEntity(pos) instanceof TrapBlockEntity trap) {
@@ -124,6 +141,21 @@ public class TrapBlock extends Block implements EntityBlock {
         trap.release();
         sl.setBlock(pos, state.setValue(OPEN, true), 3);
         return InteractionResult.SUCCESS;
+    }
+
+    @Override
+    public VoxelShape getOcclusionShape(BlockState state, BlockGetter level, BlockPos pos) {
+        return Shapes.empty();
+    }
+
+    @Override
+    public float getShadeBrightness(BlockState state, BlockGetter level, BlockPos pos) {
+        return 1.0f;
+    }
+
+    @Override
+    public boolean propagatesSkylightDown(BlockState state, BlockGetter level, BlockPos pos) {
+        return true;
     }
 
     @Nullable

@@ -176,6 +176,11 @@ public class DeerMaleEntity extends Animal implements GeoEntity {
         return 0.6f;
     }
 
+    @Override
+    public int getAmbientSoundInterval() {
+        return 300;
+    }
+
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(ServerLevel level, AgeableMob other) { return null; }

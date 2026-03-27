@@ -173,6 +173,16 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
     public boolean isRangedHurt()           { return isRangedHurt; }
     public void    setRangedHurt(boolean b) { this.isRangedHurt = b; }
 
+    @Override
+    protected float getSoundVolume() {
+        return 1.2f;
+    }
+
+    @Override
+    public int getAmbientSoundInterval() {
+        return 400;
+    }
+
     // ---- GeckoLib ----
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar registrar) {

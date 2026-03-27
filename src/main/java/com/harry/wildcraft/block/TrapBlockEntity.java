@@ -9,6 +9,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import software.bernie.geckolib.animatable.GeoBlockEntity;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.core.animation.AnimatableManager;
@@ -30,6 +31,11 @@ public class TrapBlockEntity extends BlockEntity implements GeoBlockEntity {
     private boolean pendingSnapAnim = false;
     private boolean pendingOpenAnim = false;
 
+    private static final RawAnimation ANIM_CLOSE =
+            RawAnimation.begin().thenPlay("animation.bear_trap.close");
+    private static final RawAnimation ANIM_OPEN =
+            RawAnimation.begin().thenPlay("animation.bear_trap.open");
+
     public TrapBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.TRAP_BLOCK_ENTITY.get(), pos, state);
     }
@@ -49,10 +55,8 @@ public class TrapBlockEntity extends BlockEntity implements GeoBlockEntity {
         registrar.add(
                 new AnimationController<>(this, "main", 0,
                         state -> PlayState.STOP)
-                        .triggerableAnim("snap",
-                                RawAnimation.begin().thenPlay("animation.trap_block.snap"))
-                        .triggerableAnim("open",
-                                RawAnimation.begin().thenPlay("animation.trap_block.open"))
+                        .triggerableAnim("snap", ANIM_CLOSE)
+                        .triggerableAnim("open", ANIM_OPEN)
         );
     }
 
@@ -67,7 +71,10 @@ public class TrapBlockEntity extends BlockEntity implements GeoBlockEntity {
                 worldPosition.getY() + 0.1,
                 worldPosition.getZ() + 0.5);
         entity.setNoGravity(false);
+
         pendingSnapAnim = true;
+        triggerAnim("main", "snap");
+
         if (level instanceof ServerLevel sl) {
             sl.playSound(null, worldPosition,
                     com.harry.wildcraft.init.ModSounds.TRAP_SNAP.get(),
@@ -86,7 +93,10 @@ public class TrapBlockEntity extends BlockEntity implements GeoBlockEntity {
         }
         capturedEntityUUID  = null;
         capturedEntityCache = null;
+
         pendingOpenAnim = true;
+        triggerAnim("main", "open");
+
         if (level != null) {
             level.sendBlockUpdated(worldPosition,
                     getBlockState(), getBlockState(), 3);
@@ -114,6 +124,7 @@ public class TrapBlockEntity extends BlockEntity implements GeoBlockEntity {
                     level.setBlock(worldPosition,
                             getBlockState().setValue(TrapBlock.OPEN, true), 3);
                     pendingOpenAnim = true;
+                    triggerAnim("main", "open");
                     if (level != null) {
                         level.sendBlockUpdated(worldPosition,
                                 getBlockState(), getBlockState(), 3);
@@ -134,6 +145,15 @@ public class TrapBlockEntity extends BlockEntity implements GeoBlockEntity {
                     MobEffects.MOVEMENT_SLOWDOWN,
                     Integer.MAX_VALUE, 255, false, false));
         }
+    }
+
+    @Override
+    public AABB getRenderBoundingBox() {
+        BlockPos pos = getBlockPos();
+        return new AABB(
+                pos.getX() - 0.5, pos.getY() - 0.5, pos.getZ() - 0.5,
+                pos.getX() + 1.5, pos.getY() + 1.5, pos.getZ() + 1.5
+        );
     }
 
     @Override

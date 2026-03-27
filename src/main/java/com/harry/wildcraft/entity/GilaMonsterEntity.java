@@ -124,7 +124,12 @@ public class GilaMonsterEntity extends Animal implements GeoEntity {
 
     @Override
     protected float getSoundVolume() {
-        return 0.6f;
+        return 0.4f;
+    }
+
+    @Override
+    public int getAmbientSoundInterval() {
+        return 400;
     }
 
     @Override
