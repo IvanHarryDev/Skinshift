@@ -1,9 +1,11 @@
 package com.harry.wildcraft.entity;
 
+import com.harry.wildcraft.init.ModSounds;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
@@ -38,14 +40,14 @@ public class BlackBearEntity extends Animal implements GeoEntity {
 
     public boolean isSleeping = false;
     public boolean isSitting  = false;
-    private int sitCooldown   = 200;
+    private int sitCooldown   = 800;
     private int sitDuration   = 0;
 
     private int combatTimer = 0;
     private int deathTimer  = 0;
 
-    private static final int SIT_COOLDOWN   = 200;
-    private static final int SIT_MAX        = 100;
+    private static final int SIT_COOLDOWN   = 800 + (int)(Math.random() * 400);
+    private static final int SIT_MAX        = 150;
     private static final int COMBAT_TIMEOUT = 200;
     private static final int DEATH_DELAY    = 20;
 
@@ -125,15 +127,17 @@ public class BlackBearEntity extends Animal implements GeoEntity {
         if (!inCombat && !isSleeping) {
             if (!isSitting) {
                 sitCooldown--;
-                if (sitCooldown <= 0) {
+                if (sitCooldown <= 0 && !this.isInWater()) {
                     isSitting   = true;
                     sitDuration = 0;
                     getNavigation().stop();
+                } else if (sitCooldown <= 0 && this.isInWater()) {
+                    sitCooldown = 200;
                 }
             } else {
                 getNavigation().stop();
                 sitDuration++;
-                if (sitDuration >= SIT_MAX) {
+                if (sitDuration >= SIT_MAX || this.isInWater()) {
                     isSitting   = false;
                     sitCooldown = SIT_COOLDOWN;
                 }
@@ -203,6 +207,20 @@ public class BlackBearEntity extends Animal implements GeoEntity {
         }
         return spawnData;
     }
+
+    @Override
+    protected SoundEvent getAmbientSound() {
+        return ModSounds.BLACK_BEAR_IDLE.get();
+    }
+    @Override
+    protected SoundEvent getHurtSound(DamageSource src) {
+        return ModSounds.BLACK_BEAR_HURT.get();
+    }
+    @Override
+    protected SoundEvent getDeathSound() {
+        return ModSounds.BLACK_BEAR_DEATH.get();
+    }
+
 
     @Nullable
     @Override

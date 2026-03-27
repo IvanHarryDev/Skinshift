@@ -1,9 +1,11 @@
 package com.harry.wildcraft.entity;
 
+import com.harry.wildcraft.init.ModSounds;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
@@ -341,6 +343,21 @@ public class CoyoteEntity extends Animal implements GeoEntity {
             }
         }
         return spawnData;
+    }
+
+    @Override
+    protected SoundEvent getAmbientSound() {
+        return packState == PackState.STALKING
+                ? ModSounds.COYOTE_STALK.get()
+                : ModSounds.COYOTE_IDLE.get();
+    }
+    @Override
+    protected SoundEvent getHurtSound(DamageSource src) {
+        return ModSounds.COYOTE_HURT.get();
+    }
+    @Override
+    protected SoundEvent getDeathSound() {
+        return ModSounds.COYOTE_DEATH.get();
     }
 
     @Nullable

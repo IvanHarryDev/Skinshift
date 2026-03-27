@@ -1,6 +1,0 @@
-{
-  "variants": {
-    "open=true":  { "model": "wildcraft:block/trap_open"  },
-    "open=false": { "model": "wildcraft:block/trap_closed" }
-  }
-}

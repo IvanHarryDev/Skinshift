@@ -1,0 +1,41 @@
+{
+  "entity.bison.death":        { "sounds": [{ "name": "wildcraft:bison/death",       "stream": false }] },
+  "entity.bison.hurt":         { "sounds": [{ "name": "wildcraft:bison/hurt",        "stream": false }] },
+  "entity.bison.idle":         { "sounds": [
+    { "name": "wildcraft:bison/idle1", "stream": false },
+    { "name": "wildcraft:bison/idle2", "stream": false }
+  ]},
+
+  "entity.black_bear.death":   { "sounds": [{ "name": "wildcraft:black_bear/death",  "stream": false }] },
+  "entity.black_bear.hurt":    { "sounds": [{ "name": "wildcraft:black_bear/hurt",   "stream": false }] },
+  "entity.black_bear.idle":    { "sounds": [
+    { "name": "wildcraft:black_bear/idle1", "stream": false },
+    { "name": "wildcraft:black_bear/idle2", "stream": false }
+  ]},
+
+  "entity.coyote.death":       { "sounds": [{ "name": "wildcraft:coyote/death",      "stream": false }] },
+  "entity.coyote.hurt":        { "sounds": [{ "name": "wildcraft:coyote/hurt",       "stream": false }] },
+  "entity.coyote.idle":        { "sounds": [{ "name": "wildcraft:coyote/idle",       "stream": false }] },
+  "entity.coyote.stalk":       { "sounds": [{ "name": "wildcraft:coyote/stalking",   "stream": false }] },
+
+  "entity.deer.death":         { "sounds": [{ "name": "wildcraft:deer/death",        "stream": false }] },
+  "entity.deer.hurt":          { "sounds": [{ "name": "wildcraft:deer/hurt",         "stream": false }] },
+  "entity.deer.idle":          { "sounds": [
+    { "name": "wildcraft:deer/idle1", "stream": false },
+    { "name": "wildcraft:deer/idle2", "stream": false }
+  ]},
+
+  "entity.gila_monster.attack": { "sounds": [{ "name": "wildcraft:gila_monster/attack", "stream": false }] },
+  "entity.gila_monster.death":  { "sounds": [{ "name": "wildcraft:gila_monster/death",  "stream": false }] },
+  "entity.gila_monster.idle":   { "sounds": [{ "name": "wildcraft:gila_monster/idle",   "stream": false }] },
+
+  "entity.owl.death":          { "sounds": [{ "name": "wildcraft:owl/death",          "stream": false }] },
+  "entity.owl.idle":           { "sounds": [
+    { "name": "wildcraft:owl/idle1", "stream": false },
+    { "name": "wildcraft:owl/idle2", "stream": false }
+  ]},
+  "entity.owl.fly":            { "sounds": [{ "name": "wildcraft:owl/fly",            "stream": false }] },
+  "entity.owl.hurt":           { "sounds": [{ "name": "wildcraft:owl/hurt",           "stream": false }] },
+
+  "block.trap.snap":           { "sounds": [{ "name": "wildcraft:trap/snap",          "stream": false }] }
+}

@@ -1,7 +1,9 @@
 package com.harry.wildcraft.entity;
 
 import com.harry.wildcraft.entity.goal.DeerJumpGoal;
+import com.harry.wildcraft.init.ModSounds;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
@@ -152,6 +154,19 @@ public class DeerMaleEntity extends Animal implements GeoEntity {
             }
         }
         return spawnData;
+    }
+
+    @Override
+    protected SoundEvent getAmbientSound() {
+        return ModSounds.DEER_IDLE.get();
+    }
+    @Override
+    protected SoundEvent getHurtSound(DamageSource src) {
+        return ModSounds.DEER_HURT.get();
+    }
+    @Override
+    protected SoundEvent getDeathSound() {
+        return ModSounds.DEER_DEATH.get();
     }
 
     @Nullable

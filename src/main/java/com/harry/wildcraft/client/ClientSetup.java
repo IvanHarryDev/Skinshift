@@ -2,6 +2,7 @@ package com.harry.wildcraft.client;
 
 import com.harry.wildcraft.WildCraftMod;
 import com.harry.wildcraft.client.renderer.*;
+import com.harry.wildcraft.init.ModBlockEntities;
 import com.harry.wildcraft.init.ModEntities;
 import com.harry.wildcraft.init.ModItems;
 import net.minecraftforge.api.distmarker.Dist;
@@ -30,6 +31,8 @@ public class ClientSetup {
         event.registerEntityRenderer(ModEntities.DEER_MALE.get(),   DeerMaleRenderer::new);
         event.registerEntityRenderer(ModEntities.DEER_FEMALE.get(), DeerFemaleRenderer::new);
         event.registerEntityRenderer(ModEntities.OWL.get(),           OwlRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.TIPI_BLOCK_ENTITY.get(), TipiRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.TRAP_BLOCK_ENTITY.get(), TrapRenderer::new);
     }
 
     @SubscribeEvent

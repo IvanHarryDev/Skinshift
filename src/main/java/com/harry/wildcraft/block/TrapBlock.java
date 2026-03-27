@@ -1,6 +1,5 @@
 package com.harry.wildcraft.block;
 
-import com.harry.wildcraft.init.ModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
@@ -13,9 +12,12 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
@@ -23,10 +25,10 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-
+import com.harry.wildcraft.init.ModBlockEntities;
 import javax.annotation.Nullable;
 
-public class TrapBlock extends BaseEntityBlock {
+public class TrapBlock extends Block implements EntityBlock {
 
     public static final BooleanProperty OPEN =
             BooleanProperty.create("open");
@@ -40,7 +42,8 @@ public class TrapBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<net.minecraft.world.level.block.Block, BlockState> builder) {
+    protected void createBlockStateDefinition(
+            StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(OPEN);
     }
 
@@ -51,8 +54,14 @@ public class TrapBlock extends BaseEntityBlock {
     }
 
     @Override
+    public VoxelShape getCollisionShape(BlockState state, BlockGetter level,
+                                        BlockPos pos, CollisionContext ctx) {
+        return Shapes.empty();
+    }
+
+    @Override
     public RenderShape getRenderShape(BlockState state) {
-        return RenderShape.MODEL;
+        return RenderShape.ENTITYBLOCK_ANIMATED;
     }
 
     @Nullable
@@ -61,11 +70,20 @@ public class TrapBlock extends BaseEntityBlock {
         return new TrapBlockEntity(pos, state);
     }
 
+    @Nullable
     @Override
-    public void entityInside(BlockState state, Level level, BlockPos pos,
-                             Entity entity) {
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(
+            Level level, BlockState state, BlockEntityType<T> type) {
+        return createTickerHelper(type,
+                ModBlockEntities.TRAP_BLOCK_ENTITY.get(),
+                (lvl, pos, st, be) -> be.tick());
+    }
+
+    @Override
+    public void entityInside(BlockState state, Level level,
+                             BlockPos pos, Entity entity) {
         if (level.isClientSide) return;
-        if (!state.getValue(OPEN)) return; // ya cerrada
+        if (!state.getValue(OPEN)) return; // ya está cerrada
         if (!(entity instanceof LivingEntity living)) return;
 
         level.setBlock(pos, state.setValue(OPEN, false), 3);
@@ -75,8 +93,9 @@ public class TrapBlock extends BaseEntityBlock {
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos,
-                                 Player player, InteractionHand hand, BlockHitResult hit) {
+    public InteractionResult use(BlockState state, Level level,
+                                 BlockPos pos, Player player, InteractionHand hand,
+                                 BlockHitResult hit) {
         if (level.isClientSide) return InteractionResult.SUCCESS;
         if (!(level instanceof ServerLevel sl)) return InteractionResult.PASS;
         if (!(sl.getBlockEntity(pos) instanceof TrapBlockEntity trap))
@@ -96,19 +115,12 @@ public class TrapBlock extends BaseEntityBlock {
         return InteractionResult.SUCCESS;
     }
 
-    @Override
     @Nullable
-    public <T extends BlockEntity> net.minecraft.world.level.block.entity.BlockEntityTicker<T>
-    getTicker(Level level, BlockState state,
-              net.minecraft.world.level.block.entity.BlockEntityType<T> type) {
-        return createTickerHelper(type,
-                ModBlockEntities.TRAP_BLOCK_ENTITY.get(),
-                (lvl, pos, st, be) -> be.tick());
-    }
-
-    @Override
-    public VoxelShape getCollisionShape(BlockState state, BlockGetter level,
-                                        BlockPos pos, CollisionContext ctx) {
-        return Shapes.empty();
+    protected static <E extends BlockEntity, A extends BlockEntity>
+    BlockEntityTicker<A> createTickerHelper(
+            BlockEntityType<A> type,
+            BlockEntityType<E> targetType,
+            BlockEntityTicker<? super E> ticker) {
+        return targetType == type ? (BlockEntityTicker<A>) ticker : null;
     }
 }

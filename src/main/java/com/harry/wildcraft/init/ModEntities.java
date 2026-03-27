@@ -60,7 +60,7 @@ public class ModEntities {
             ENTITIES.register("owl",
                     () -> EntityType.Builder.<OwlEntity>of(OwlEntity::new,
                                     MobCategory.AMBIENT)
-                            .sized(0.9f, 1.4f)
+                            .sized(0.7f, 1.0f)
                             .build("owl"));
 
     public static final RegistryObject<EntityType<DeerMaleEntity>> DEER_MALE =

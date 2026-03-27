@@ -1,6 +1,8 @@
 package com.harry.wildcraft.entity;
 
+import com.harry.wildcraft.init.ModSounds;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -87,6 +89,7 @@ public class GilaMonsterEntity extends Animal implements GeoEntity {
     public boolean doHurtTarget(Entity target) {
         boolean hit = super.doHurtTarget(target);
         if (hit) {
+            playSound(ModSounds.GILA_MONSTER_ATTACK.get(), 1.0f, 1.0f);
             triggerAnim("events", "attack");
             if (target instanceof LivingEntity le)
                 le.addEffect(new MobEffectInstance(MobEffects.POISON, 100, 0));
@@ -107,6 +110,15 @@ public class GilaMonsterEntity extends Animal implements GeoEntity {
             }
         }
         return h;
+    }
+
+    @Override
+    protected SoundEvent getAmbientSound() {
+        return ModSounds.GILA_MONSTER_IDLE.get();
+    }
+    @Override
+    protected SoundEvent getDeathSound() {
+        return ModSounds.GILA_MONSTER_DEATH.get();
     }
 
     @Override

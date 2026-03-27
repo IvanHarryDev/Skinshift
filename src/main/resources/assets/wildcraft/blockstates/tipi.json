@@ -1,8 +1,0 @@
-{
-  "variants": {
-    "facing=north": { "model": "wildcraft:block/tipi",                  "y": 0   },
-    "facing=east":  { "model": "wildcraft:block/tipi",                  "y": 90  },
-    "facing=south": { "model": "wildcraft:block/tipi",                  "y": 180 },
-    "facing=west":  { "model": "wildcraft:block/tipi",                  "y": 270 }
-  }
-}
