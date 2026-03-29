@@ -362,12 +362,12 @@ public class CoyoteEntity extends Animal implements GeoEntity {
 
     @Override
     protected float getSoundVolume() {
-        return 0.8f;
+        return 0.5f;
     }
 
     @Override
     public int getAmbientSoundInterval() {
-        return 160;
+        return 240;
     }
 
     @Nullable

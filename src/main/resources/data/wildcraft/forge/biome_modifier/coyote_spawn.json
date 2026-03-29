@@ -2,6 +2,11 @@
   "type": "forge:add_spawns",
   "biomes": "#wildcraft:coyote_biomes",
   "spawners": [
-    { "type": "wildcraft:coyote", "weight": 8, "minCount": 3, "maxCount": 6 }
+    {
+      "type": "wildcraft:coyote",
+      "weight": 3,
+      "minCount": 1,
+      "maxCount": 3
+    }
   ]
 }

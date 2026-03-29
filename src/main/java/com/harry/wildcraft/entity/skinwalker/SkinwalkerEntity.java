@@ -175,12 +175,12 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
 
     @Override
     protected float getSoundVolume() {
-        return 1.2f;
+        return 0.7f;
     }
 
     @Override
     public int getAmbientSoundInterval() {
-        return 400;
+        return 500;
     }
 
     // ---- GeckoLib ----

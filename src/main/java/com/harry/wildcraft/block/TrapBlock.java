@@ -21,17 +21,13 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
-import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import com.harry.wildcraft.init.ModBlockEntities;
 import com.harry.wildcraft.init.ModBlocks;
-
 import javax.annotation.Nullable;
-import java.util.Collections;
-import java.util.List;
 
 public class TrapBlock extends Block implements EntityBlock {
 
@@ -70,13 +66,21 @@ public class TrapBlock extends Block implements EntityBlock {
     }
 
     @Override
-    public List<ItemStack> getDrops(BlockState state, LootParams.Builder builder) {
-        return Collections.singletonList(new ItemStack(ModBlocks.TRAP_BLOCK.get()));
+    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        if (!level.isClientSide && !player.isCreative()) {
+            // Release captured entity first
+            if (level.getBlockEntity(pos) instanceof TrapBlockEntity trap) {
+                trap.release();
+            }
+            Block.popResource(level, pos, new ItemStack(ModBlocks.TRAP_BLOCK.get()));
+        }
+        super.playerWillDestroy(level, pos, state, player);
     }
 
     @Override
-    public float getDestroyProgress(BlockState state, Player player, BlockGetter level, BlockPos pos) {
-        return 0.2f;
+    public float getDestroyProgress(BlockState state, Player player,
+                                    BlockGetter level, BlockPos pos) {
+        return 0.15f;
     }
 
     @Nullable
@@ -111,11 +115,11 @@ public class TrapBlock extends Block implements EntityBlock {
         if (level.isClientSide) return;
         if (!state.getValue(OPEN)) return;
         if (!(entity instanceof LivingEntity living)) return;
-
         if (entity instanceof Player) return;
 
-        level.setBlock(pos, state.setValue(OPEN, false), 3);
         if (level.getBlockEntity(pos) instanceof TrapBlockEntity trap) {
+            if (trap.isOnCooldown()) return;
+            level.setBlock(pos, state.setValue(OPEN, false), 3);
             trap.captureEntity(living);
         }
     }

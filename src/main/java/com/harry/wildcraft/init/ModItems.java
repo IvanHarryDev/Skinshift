@@ -1,8 +1,8 @@
 package com.harry.wildcraft.init;
 
 import com.harry.wildcraft.WildCraftMod;
+import com.harry.wildcraft.item.TipiItem;
 import com.harry.wildcraft.item.TrapItem;
-import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.common.ForgeSpawnEggItem;
 import net.minecraftforge.registries.DeferredRegister;
@@ -27,7 +27,7 @@ public class ModItems {
 
     public static final RegistryObject<Item> TIPI_ITEM =
             ITEMS.register("tipi",
-                    () -> new BlockItem(ModBlocks.TIPI.get(), new Item.Properties()));
+                    () -> new TipiItem(ModBlocks.TIPI.get(), new Item.Properties()));
 
     // ===== SPAWN EGGS =====
     public static final RegistryObject<ForgeSpawnEggItem> SKINWALKER_EGG =

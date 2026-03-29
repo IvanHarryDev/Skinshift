@@ -158,12 +158,12 @@ public class BisonEntity extends Animal implements GeoEntity {
 
     @Override
     protected float getSoundVolume() {
-        return 1.0f;
+        return 0.7f;
     }
 
     @Override
     public int getAmbientSoundInterval() {
-        return 200;
+        return 300;
     }
 
     // ---- GeckoLib ----

@@ -223,12 +223,12 @@ public class BlackBearEntity extends Animal implements GeoEntity {
 
     @Override
     protected float getSoundVolume() {
-        return 0.9f;
+        return 0.6f;
     }
 
     @Override
     public int getAmbientSoundInterval() {
-        return 240;
+        return 350;
     }
 
     @Nullable

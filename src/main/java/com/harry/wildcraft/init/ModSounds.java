@@ -13,64 +13,56 @@ public class ModSounds {
 
     // SKINWALKER
     public static final RegistryObject<SoundEvent> SKINWALKER_SCREAM =
-            SOUNDS.register("skinwalker_scream",
-                    () -> SoundEvent.createFixedRangeEvent(
-                            ResourceLocation.fromNamespaceAndPath(MOD_ID, "skinwalker.scream"), 24.0f));
+            regFixed("skinwalker.scream", 20.0f);
 
     public static final RegistryObject<SoundEvent> SKINWALKER_MORPH =
-            SOUNDS.register("skinwalker_morph",
-                    () -> SoundEvent.createFixedRangeEvent(
-                            ResourceLocation.fromNamespaceAndPath(MOD_ID, "skinwalker.morph"), 16.0f));
+            regFixed("skinwalker.morph", 14.0f);
 
     // OWL
     public static final RegistryObject<SoundEvent> OWL_HOOT =
-            SOUNDS.register("owl_hoot",
-                    () -> SoundEvent.createFixedRangeEvent(
-                            ResourceLocation.fromNamespaceAndPath(MOD_ID, "owl.hoot"), 16.0f));
+            regFixed("owl.hoot", 12.0f);
 
     // BISON
-    public static final RegistryObject<SoundEvent> BISON_DEATH = regVariable("entity.bison.death");
-    public static final RegistryObject<SoundEvent> BISON_HURT  = regVariable("entity.bison.hurt");
-    public static final RegistryObject<SoundEvent> BISON_IDLE  = regVariable("entity.bison.idle");
+    public static final RegistryObject<SoundEvent> BISON_DEATH = regVar("entity.bison.death");
+    public static final RegistryObject<SoundEvent> BISON_HURT  = regVar("entity.bison.hurt");
+    public static final RegistryObject<SoundEvent> BISON_IDLE  = regVar("entity.bison.idle");
 
     // BLACK BEAR
-    public static final RegistryObject<SoundEvent> BLACK_BEAR_DEATH = regVariable("entity.black_bear.death");
-    public static final RegistryObject<SoundEvent> BLACK_BEAR_HURT  = regVariable("entity.black_bear.hurt");
-    public static final RegistryObject<SoundEvent> BLACK_BEAR_IDLE  = regVariable("entity.black_bear.idle");
+    public static final RegistryObject<SoundEvent> BLACK_BEAR_DEATH = regVar("entity.black_bear.death");
+    public static final RegistryObject<SoundEvent> BLACK_BEAR_HURT  = regVar("entity.black_bear.hurt");
+    public static final RegistryObject<SoundEvent> BLACK_BEAR_IDLE  = regVar("entity.black_bear.idle");
 
     // COYOTE
-    public static final RegistryObject<SoundEvent> COYOTE_DEATH = regVariable("entity.coyote.death");
-    public static final RegistryObject<SoundEvent> COYOTE_HURT  = regVariable("entity.coyote.hurt");
-    public static final RegistryObject<SoundEvent> COYOTE_IDLE  = regVariable("entity.coyote.idle");
-    public static final RegistryObject<SoundEvent> COYOTE_STALK = regVariable("entity.coyote.stalk");
+    public static final RegistryObject<SoundEvent> COYOTE_DEATH = regVar("entity.coyote.death");
+    public static final RegistryObject<SoundEvent> COYOTE_HURT  = regVar("entity.coyote.hurt");
+    public static final RegistryObject<SoundEvent> COYOTE_IDLE  = regVar("entity.coyote.idle");
+    public static final RegistryObject<SoundEvent> COYOTE_STALK = regVar("entity.coyote.stalk");
 
     // DEER
-    public static final RegistryObject<SoundEvent> DEER_DEATH = regVariable("entity.deer.death");
-    public static final RegistryObject<SoundEvent> DEER_HURT  = regVariable("entity.deer.hurt");
-    public static final RegistryObject<SoundEvent> DEER_IDLE  = regVariable("entity.deer.idle");
+    public static final RegistryObject<SoundEvent> DEER_DEATH = regVar("entity.deer.death");
+    public static final RegistryObject<SoundEvent> DEER_HURT  = regVar("entity.deer.hurt");
+    public static final RegistryObject<SoundEvent> DEER_IDLE  = regVar("entity.deer.idle");
 
     // GILA MONSTER
-    public static final RegistryObject<SoundEvent> GILA_MONSTER_ATTACK = regVariable("entity.gila_monster.attack");
-    public static final RegistryObject<SoundEvent> GILA_MONSTER_DEATH  = regVariable("entity.gila_monster.death");
-    public static final RegistryObject<SoundEvent> GILA_MONSTER_IDLE   = regVariable("entity.gila_monster.idle");
+    public static final RegistryObject<SoundEvent> GILA_MONSTER_ATTACK = regVar("entity.gila_monster.attack");
+    public static final RegistryObject<SoundEvent> GILA_MONSTER_DEATH  = regVar("entity.gila_monster.death");
+    public static final RegistryObject<SoundEvent> GILA_MONSTER_IDLE   = regVar("entity.gila_monster.idle");
 
     // OWL
-    public static final RegistryObject<SoundEvent> OWL_DEATH = regVariable("entity.owl.death");
-    public static final RegistryObject<SoundEvent> OWL_IDLE  = regVariable("entity.owl.idle");
-    public static final RegistryObject<SoundEvent> OWL_FLY   = regVariable("entity.owl.fly");
-    public static final RegistryObject<SoundEvent> OWL_HURT  = regVariable("entity.owl.hurt");
+    public static final RegistryObject<SoundEvent> OWL_DEATH = regVar("entity.owl.death");
+    public static final RegistryObject<SoundEvent> OWL_IDLE  = regVar("entity.owl.idle");
+    public static final RegistryObject<SoundEvent> OWL_FLY   = regVar("entity.owl.fly");
+    public static final RegistryObject<SoundEvent> OWL_HURT  = regVar("entity.owl.hurt");
 
     // TRAP
-    public static final RegistryObject<SoundEvent> TRAP_SNAP = regVariable("block.trap.snap");
+    public static final RegistryObject<SoundEvent> TRAP_SNAP = regVar("block.trap.snap");
 
-    // Helper: VARIABLE range (distance-based attenuation)
-    private static RegistryObject<SoundEvent> regVariable(String name) {
+    private static RegistryObject<SoundEvent> regVar(String name) {
         return SOUNDS.register(name.replace('.', '_'),
                 () -> SoundEvent.createVariableRangeEvent(
                         ResourceLocation.fromNamespaceAndPath(MOD_ID, name)));
     }
 
-    @SuppressWarnings("unused")
     private static RegistryObject<SoundEvent> regFixed(String name, float range) {
         return SOUNDS.register(name.replace('.', '_'),
                 () -> SoundEvent.createFixedRangeEvent(

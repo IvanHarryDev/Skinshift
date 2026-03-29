@@ -7,6 +7,11 @@
     "minecraft:eroded_badlands"
   ],
   "spawners": [
-    { "type": "wildcraft:gila_monster", "weight": 8, "minCount": 1, "maxCount": 1 }
+    {
+      "type": "wildcraft:gila_monster",
+      "weight": 2,
+      "minCount": 1,
+      "maxCount": 1
+    }
   ]
 }

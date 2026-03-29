@@ -31,6 +31,9 @@ public class TrapBlockEntity extends BlockEntity implements GeoBlockEntity {
     private boolean pendingSnapAnim = false;
     private boolean pendingOpenAnim = false;
 
+    private int rearmCooldown = 0;
+    private static final int REARM_COOLDOWN_TICKS = 200; // 10 seconds
+
     private static final RawAnimation ANIM_CLOSE =
             RawAnimation.begin().thenPlay("animation.bear_trap.close");
     private static final RawAnimation ANIM_OPEN =
@@ -38,6 +41,10 @@ public class TrapBlockEntity extends BlockEntity implements GeoBlockEntity {
 
     public TrapBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.TRAP_BLOCK_ENTITY.get(), pos, state);
+    }
+
+    public boolean isOnCooldown() {
+        return rearmCooldown > 0;
     }
 
     public boolean consumeSnapAnim() {
@@ -63,6 +70,8 @@ public class TrapBlockEntity extends BlockEntity implements GeoBlockEntity {
     public void captureEntity(LivingEntity entity) {
         capturedEntityUUID  = entity.getUUID();
         capturedEntityCache = entity;
+        rearmCooldown = 0;
+
         entity.addEffect(new MobEffectInstance(
                 MobEffects.MOVEMENT_SLOWDOWN,
                 Integer.MAX_VALUE, 255, false, false));
@@ -79,7 +88,7 @@ public class TrapBlockEntity extends BlockEntity implements GeoBlockEntity {
             sl.playSound(null, worldPosition,
                     com.harry.wildcraft.init.ModSounds.TRAP_SNAP.get(),
                     net.minecraft.sounds.SoundSource.BLOCKS,
-                    0.8f, 0.9f + sl.random.nextFloat() * 0.2f);
+                    0.6f, 0.9f + sl.random.nextFloat() * 0.2f);
             level.sendBlockUpdated(worldPosition,
                     getBlockState(), getBlockState(), 3);
         }
@@ -93,6 +102,8 @@ public class TrapBlockEntity extends BlockEntity implements GeoBlockEntity {
         }
         capturedEntityUUID  = null;
         capturedEntityCache = null;
+
+        rearmCooldown = REARM_COOLDOWN_TICKS;
 
         pendingOpenAnim = true;
         triggerAnim("main", "open");
@@ -115,6 +126,11 @@ public class TrapBlockEntity extends BlockEntity implements GeoBlockEntity {
 
     public void tick() {
         if (level == null || level.isClientSide) return;
+
+        if (rearmCooldown > 0) {
+            rearmCooldown--;
+        }
+
         LivingEntity captured = getCapturedEntity();
         if (captured == null || !captured.isAlive()) {
             if (capturedEntityUUID != null) {
@@ -125,14 +141,14 @@ public class TrapBlockEntity extends BlockEntity implements GeoBlockEntity {
                             getBlockState().setValue(TrapBlock.OPEN, true), 3);
                     pendingOpenAnim = true;
                     triggerAnim("main", "open");
-                    if (level != null) {
-                        level.sendBlockUpdated(worldPosition,
-                                getBlockState(), getBlockState(), 3);
-                    }
+                    level.sendBlockUpdated(worldPosition,
+                            getBlockState(), getBlockState(), 3);
+                    rearmCooldown = REARM_COOLDOWN_TICKS;
                 }
             }
             return;
         }
+
         double cx = worldPosition.getX() + 0.5;
         double cy = worldPosition.getY() + 0.1;
         double cz = worldPosition.getZ() + 0.5;
@@ -187,6 +203,7 @@ public class TrapBlockEntity extends BlockEntity implements GeoBlockEntity {
         super.saveAdditional(tag);
         if (capturedEntityUUID != null)
             tag.putUUID("CapturedEntity", capturedEntityUUID);
+        tag.putInt("RearmCooldown", rearmCooldown);
     }
 
     @Override
@@ -194,6 +211,7 @@ public class TrapBlockEntity extends BlockEntity implements GeoBlockEntity {
         super.load(tag);
         if (tag.hasUUID("CapturedEntity"))
             capturedEntityUUID = tag.getUUID("CapturedEntity");
+        rearmCooldown = tag.getInt("RearmCooldown");
     }
 
     @Override

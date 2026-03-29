@@ -5,6 +5,11 @@
     "minecraft:frozen_river"
   ],
   "spawners": [
-    { "type": "wildcraft:brook_trout", "weight": 12, "minCount": 3, "maxCount": 8 }
+    {
+      "type": "wildcraft:brook_trout",
+      "weight": 4,
+      "minCount": 2,
+      "maxCount": 4
+    }
   ]
 }

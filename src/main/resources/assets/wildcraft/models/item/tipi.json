@@ -1,6 +1,3 @@
 {
-  "parent": "minecraft:item/generated",
-  "textures": {
-    "layer0": "wildcraft:item/tipi"
-  }
+  "parent": "minecraft:builtin/entity"
 }
