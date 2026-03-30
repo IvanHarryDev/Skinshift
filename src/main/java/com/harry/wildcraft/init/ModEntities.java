@@ -17,7 +17,7 @@ public class ModEntities {
             ENTITIES.register("skinwalker",
                     () -> EntityType.Builder.<SkinwalkerEntity>of(SkinwalkerEntity::new,
                                     MobCategory.MONSTER)
-                            .sized(0.6f, 1.95f)
+                            .sized(0.9f, 3.5f)
                             .clientTrackingRange(80)
                             .build("skinwalker"));
 
@@ -25,35 +25,35 @@ public class ModEntities {
             ENTITIES.register("gila_monster",
                     () -> EntityType.Builder.<GilaMonsterEntity>of(GilaMonsterEntity::new,
                                     MobCategory.CREATURE)
-                            .sized(1.4f, 0.45f)
+                            .sized(1.1f, 0.35f)
                             .build("gila_monster"));
 
     public static final RegistryObject<EntityType<BlackBearEntity>> BLACK_BEAR =
             ENTITIES.register("black_bear",
                     () -> EntityType.Builder.<BlackBearEntity>of(BlackBearEntity::new,
                                     MobCategory.CREATURE)
-                            .sized(1.2f, 1.4f)
+                            .sized(1.8f, 1.5f)
                             .build("black_bear"));
 
     public static final RegistryObject<EntityType<BrookTroutEntity>> BROOK_TROUT =
             ENTITIES.register("brook_trout",
                     () -> EntityType.Builder.<BrookTroutEntity>of(BrookTroutEntity::new,
                                     MobCategory.WATER_CREATURE)
-                            .sized(0.5f, 0.3f)
+                            .sized(0.85f, 0.45f)
                             .build("brook_trout"));
 
     public static final RegistryObject<EntityType<BisonEntity>> BISON =
             ENTITIES.register("bison",
                     () -> EntityType.Builder.<BisonEntity>of(BisonEntity::new,
                                     MobCategory.CREATURE)
-                            .sized(1.8f, 1.6f)
+                            .sized(2.1f, 2.0f)
                             .build("bison"));
 
     public static final RegistryObject<EntityType<CoyoteEntity>> COYOTE =
             ENTITIES.register("coyote",
                     () -> EntityType.Builder.<CoyoteEntity>of(CoyoteEntity::new,
                                     MobCategory.CREATURE)
-                            .sized(0.9f, 0.85f)
+                            .sized(1.2f, 1.0f)
                             .build("coyote"));
 
     public static final RegistryObject<EntityType<OwlEntity>> OWL =
@@ -67,13 +67,13 @@ public class ModEntities {
             ENTITIES.register("deer_male",
                     () -> EntityType.Builder.<DeerMaleEntity>of(DeerMaleEntity::new,
                                     MobCategory.CREATURE)
-                            .sized(0.9f, 1.4f)
+                            .sized(1.4f, 2.2f)
                             .build("deer_male"));
 
     public static final RegistryObject<EntityType<DeerFemaleEntity>> DEER_FEMALE =
             ENTITIES.register("deer_female",
                     () -> EntityType.Builder.<DeerFemaleEntity>of(DeerFemaleEntity::new,
                                     MobCategory.CREATURE)
-                            .sized(0.9f, 1.4f)
+                            .sized(1.4f, 2.2f)
                             .build("deer_female"));
 }

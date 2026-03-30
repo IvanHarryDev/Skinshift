@@ -7,14 +7,20 @@ import com.harry.wildcraft.client.model.TipiModel;
 import com.harry.wildcraft.client.model.TrapModel;
 import com.harry.wildcraft.init.ModBlocks;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import software.bernie.geckolib.cache.object.BakedGeoModel;
+import software.bernie.geckolib.core.animatable.GeoAnimatable;
+import software.bernie.geckolib.model.GeoModel;
 import software.bernie.geckolib.renderer.GeoBlockRenderer;
 
 public class WildCraftItemRenderer extends BlockEntityWithoutLevelRenderer {
@@ -24,10 +30,15 @@ public class WildCraftItemRenderer extends BlockEntityWithoutLevelRenderer {
     private TipiBlockEntity dummyTipi;
     private TrapBlockEntity dummyTrap;
 
-    private GeoBlockRenderer<TipiBlockEntity> tipiRenderer;
-    private GeoBlockRenderer<TrapBlockEntity> trapRenderer;
+    private FullbrightBlockRenderer<TipiBlockEntity> tipiRenderer;
+    private FullbrightBlockRenderer<TrapBlockEntity> trapRenderer;
 
     private boolean initialized = false;
+
+    private static final ResourceLocation TIPI_TEX =
+            ResourceLocation.fromNamespaceAndPath(WildCraftMod.MOD_ID, "textures/block/tipi.png");
+    private static final ResourceLocation TRAP_TEX =
+            ResourceLocation.fromNamespaceAndPath(WildCraftMod.MOD_ID, "textures/block/trap_block.png");
 
     public WildCraftItemRenderer() {
         super(null, null);
@@ -50,21 +61,8 @@ public class WildCraftItemRenderer extends BlockEntityWithoutLevelRenderer {
         BlockState trapState = ModBlocks.TRAP_BLOCK.get().defaultBlockState();
         dummyTrap = new TrapBlockEntity(BlockPos.ZERO, trapState);
 
-        tipiRenderer = new GeoBlockRenderer<TipiBlockEntity>(new TipiModel()) {
-            @Override
-            public ResourceLocation getTextureLocation(TipiBlockEntity block) {
-                return ResourceLocation.fromNamespaceAndPath(
-                        WildCraftMod.MOD_ID, "textures/block/tipi.png");
-            }
-        };
-
-        trapRenderer = new GeoBlockRenderer<TrapBlockEntity>(new TrapModel()) {
-            @Override
-            public ResourceLocation getTextureLocation(TrapBlockEntity block) {
-                return ResourceLocation.fromNamespaceAndPath(
-                        WildCraftMod.MOD_ID, "textures/block/trap_block.png");
-            }
-        };
+        tipiRenderer = new FullbrightBlockRenderer<>(new TipiModel(), TIPI_TEX);
+        trapRenderer = new FullbrightBlockRenderer<>(new TrapModel(), TRAP_TEX);
     }
 
     @Override
@@ -74,9 +72,46 @@ public class WildCraftItemRenderer extends BlockEntityWithoutLevelRenderer {
         ensureInitialized();
 
         if (stack.getItem() == ModBlocks.TIPI.get().asItem()) {
+            tipiRenderer.setItemLight(light);
             renderTipi(ctx, pose, buffer, light, overlay);
         } else if (stack.getItem() instanceof com.harry.wildcraft.item.TrapItem) {
+            trapRenderer.setItemLight(light);
             renderTrap(ctx, pose, buffer, light, overlay);
+        }
+    }
+
+    private static class FullbrightBlockRenderer<T extends BlockEntity & GeoAnimatable>
+            extends GeoBlockRenderer<T> {
+
+        private final ResourceLocation texture;
+        private int itemLight = 15728880;
+
+        public FullbrightBlockRenderer(GeoModel<T> model, ResourceLocation texture) {
+            super(model);
+            this.texture = texture;
+        }
+
+        public void setItemLight(int light) {
+            this.itemLight = light;
+        }
+
+        @Override
+        public ResourceLocation getTextureLocation(T block) {
+            return texture;
+        }
+
+        @Override
+        public void actuallyRender(PoseStack poseStack, T animatable,
+                                   BakedGeoModel model, RenderType renderType,
+                                   MultiBufferSource bufferSource,
+                                   VertexConsumer buffer, boolean isReRender,
+                                   float partialTick, int packedLight,
+                                   int packedOverlay, float red, float green,
+                                   float blue, float alpha) {
+
+            super.actuallyRender(poseStack, animatable, model, renderType,
+                    bufferSource, buffer, isReRender, partialTick,
+                    this.itemLight, packedOverlay, red, green, blue, alpha);
         }
     }
 
@@ -137,7 +172,7 @@ public class WildCraftItemRenderer extends BlockEntityWithoutLevelRenderer {
             case FIXED -> {
                 pose.translate(0.5, 0.5, 0.5);
                 pose.mulPose(Axis.XP.rotationDegrees(-90));
-                pose.translate(0.0, -0.05, 0.45);
+                pose.translate(0.0, 0.39, 0.09);
                 pose.scale(0.9f, 0.9f, 0.9f);
                 pose.translate(-0.5, -0.5, -0.5);
             }
