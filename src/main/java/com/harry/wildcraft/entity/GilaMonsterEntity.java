@@ -30,7 +30,7 @@ public class GilaMonsterEntity extends Animal implements GeoEntity {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     private int combatTimer = 0;
-    private static final int COMBAT_TIMEOUT = 100; // 5 s
+    private static final int COMBAT_TIMEOUT = 100;
 
     private int deathTimer = 0;
     private static final int DEATH_DELAY = 20;
@@ -124,12 +124,11 @@ public class GilaMonsterEntity extends Animal implements GeoEntity {
 
     @Override
     protected float getSoundVolume() {
-        return 0.25f;
+        return 0.15f;
     }
-
     @Override
     public int getAmbientSoundInterval() {
-        return 500;
+        return 800;
     }
 
     @Override

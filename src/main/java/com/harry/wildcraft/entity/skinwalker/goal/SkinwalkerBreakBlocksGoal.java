@@ -11,7 +11,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import java.util.EnumSet;
 
 public class SkinwalkerBreakBlocksGoal extends Goal {
+
     private final SkinwalkerEntity sw;
+    private static final float MAX_HARDNESS = 10.0f;
 
     public SkinwalkerBreakBlocksGoal(SkinwalkerEntity sw) {
         this.sw = sw;
@@ -19,22 +21,39 @@ public class SkinwalkerBreakBlocksGoal extends Goal {
     }
 
     @Override
-    public boolean canUse() { return sw.getMode() == SkinwalkerMode.AGGRESSIVE; }
+    public boolean canUse() {
+        return sw.getMode() == SkinwalkerMode.AGGRESSIVE;
+    }
 
     @Override
     public void tick() {
-        ServerLevel level = (ServerLevel) sw.level();
+        if (!(sw.level() instanceof ServerLevel level)) return;
         Player target = level.getPlayerByUUID(sw.getTargetPlayerUUID());
         if (target == null) return;
 
-        BlockPos frontPos = BlockPos.containing(
-                sw.getX() + sw.getLookAngle().x * 1.5,
-                sw.getY() + 0.5,
-                sw.getZ() + sw.getLookAngle().z * 1.5);
+        double lookX = sw.getLookAngle().x * 1.5;
+        double lookZ = sw.getLookAngle().z * 1.5;
 
-        BlockState state = level.getBlockState(frontPos);
-        if (!state.isAir() && state.getDestroySpeed(level, frontPos) < 10.0f) {
-            level.destroyBlock(frontPos, true);
+        BlockPos lowerPos = BlockPos.containing(
+                sw.getX() + lookX,
+                sw.getY() + 0.5,
+                sw.getZ() + lookZ
+        );
+        tryBreak(level, lowerPos);
+
+        BlockPos upperPos = BlockPos.containing(
+                sw.getX() + lookX,
+                sw.getY() + 1.5,
+                sw.getZ() + lookZ
+        );
+        tryBreak(level, upperPos);
+    }
+
+    private void tryBreak(ServerLevel level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        if (!state.isAir() && state.getDestroySpeed(level, pos) >= 0
+                && state.getDestroySpeed(level, pos) < MAX_HARDNESS) {
+            level.destroyBlock(pos, true);
         }
     }
 }

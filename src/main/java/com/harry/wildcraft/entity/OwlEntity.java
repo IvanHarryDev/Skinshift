@@ -315,7 +315,7 @@ public class OwlEntity extends FlyingMob implements GeoEntity {
 
     @Override
     protected float getSoundVolume() {
-        return 0.35f;
+        return 0.2f;
     }
 
     // ---- GeckoLib ----

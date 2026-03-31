@@ -165,8 +165,14 @@ public class BisonEntity extends Animal implements GeoEntity {
     @Override protected SoundEvent getAmbientSound() { return ModSounds.BISON_IDLE.get(); }
     @Override protected SoundEvent getHurtSound(DamageSource src) { return ModSounds.BISON_HURT.get(); }
     @Override protected SoundEvent getDeathSound() { return ModSounds.BISON_DEATH.get(); }
-    @Override protected float getSoundVolume() { return 0.7f; }
-    @Override public int getAmbientSoundInterval() { return 300; }
+    @Override
+    protected float getSoundVolume() {
+        return 0.4f;
+    }
+    @Override
+    public int getAmbientSoundInterval() {
+        return 600;
+    }
 
     // ---- GeckoLib ----
     @Override

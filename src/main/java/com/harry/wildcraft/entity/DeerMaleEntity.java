@@ -173,12 +173,11 @@ public class DeerMaleEntity extends Animal implements GeoEntity {
 
     @Override
     protected float getSoundVolume() {
-        return 0.4f;
+        return 0.25f;
     }
-
     @Override
     public int getAmbientSoundInterval() {
-        return 400;
+        return 700;
     }
 
     @Nullable

@@ -6,6 +6,12 @@ import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.model.GeoModel;
 
 public class SkinwalkerModel extends GeoModel<SkinwalkerEntity> {
+
+    private static final ResourceLocation TEXTURE_NORMAL =
+            ResourceLocation.fromNamespaceAndPath(WildCraftMod.MOD_ID, "textures/entity/skinwalker.png");
+    private static final ResourceLocation TEXTURE_MORPHING =
+            ResourceLocation.fromNamespaceAndPath(WildCraftMod.MOD_ID, "textures/entity/skinwalker_morphing.png");
+
     @Override
     public ResourceLocation getModelResource(SkinwalkerEntity entity) {
         return ResourceLocation.fromNamespaceAndPath(WildCraftMod.MOD_ID, "geo/skinwalker.geo.json");
@@ -13,7 +19,10 @@ public class SkinwalkerModel extends GeoModel<SkinwalkerEntity> {
 
     @Override
     public ResourceLocation getTextureResource(SkinwalkerEntity entity) {
-        return ResourceLocation.fromNamespaceAndPath(WildCraftMod.MOD_ID, "textures/entity/skinwalker.png");
+        if (entity.isMorphing()) {
+            return TEXTURE_MORPHING;
+        }
+        return TEXTURE_NORMAL;
     }
 
     @Override

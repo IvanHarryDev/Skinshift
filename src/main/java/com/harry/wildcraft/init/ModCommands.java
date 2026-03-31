@@ -2,6 +2,7 @@ package com.harry.wildcraft.init;
 
 import com.harry.wildcraft.entity.skinwalker.SkinwalkerEntity;
 import com.harry.wildcraft.entity.skinwalker.SkinwalkerMode;
+import com.harry.wildcraft.entity.skinwalker.SkinwalkerMorphHelper;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -33,14 +34,21 @@ public class ModCommands {
         ServerLevel level   = player.serverLevel();
         SkinwalkerEntity sw = ModEntities.SKINWALKER.get().create(level);
         if (sw == null) return 0;
+
         sw.setMode(mode);
         sw.setModeLocked(true);
         sw.setTargetPlayer(player.getUUID());
+
         Vec3 spawnPos = player.position().add(player.getLookAngle().scale(5));
         sw.moveTo(spawnPos.x, spawnPos.y, spawnPos.z);
+
+        if (mode != SkinwalkerMode.AGGRESSIVE) {
+            SkinwalkerMorphHelper.morphToClosestBiomeAnimal(sw, level, spawnPos);
+        }
+
         level.addFreshEntity(sw);
         ctx.getSource().sendSuccess(
-                () -> Component.literal("Skinwalker spawned in " + mode.name() + " mode"), false);
+                () -> Component.literal("Skinwalker spawned in " + mode.name() + " mode (locked)"), false);
         return Command.SINGLE_SUCCESS;
     }
 }

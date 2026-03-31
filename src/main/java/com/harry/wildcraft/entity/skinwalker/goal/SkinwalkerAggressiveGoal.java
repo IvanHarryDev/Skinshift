@@ -12,6 +12,7 @@ import net.minecraft.world.level.pathfinder.Path;
 import java.util.EnumSet;
 
 public class SkinwalkerAggressiveGoal extends Goal {
+
     private final SkinwalkerEntity sw;
     private int pathCheckCooldown = 0;
     private static final int PATH_CHECK_INTERVAL = 40;
@@ -23,8 +24,11 @@ public class SkinwalkerAggressiveGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return sw.getMode() == SkinwalkerMode.AGGRESSIVE;
+        return sw.getMode() == SkinwalkerMode.AGGRESSIVE && !sw.isDraggingPlayer();
     }
+
+    @Override
+    public boolean canContinueToUse() { return canUse(); }
 
     @Override
     public void start() {
@@ -59,16 +63,17 @@ public class SkinwalkerAggressiveGoal extends Goal {
             double dx = target.getX() - sw.getX();
             double dy = target.getY() - sw.getY();
             double dz = target.getZ() - sw.getZ();
-            double dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
             if (dist > 2.0) {
                 double speed = 0.4;
-                sw.setDeltaMovement(dx/dist*speed, dy/dist*speed*0.5, dz/dist*speed);
+                sw.setDeltaMovement(dx / dist * speed, dy / dist * speed * 0.5, dz / dist * speed);
             }
         } else {
             sw.getNavigation().moveTo(target, 1.0);
         }
 
         if (sw.isPendingThreateningHit() && sw.distanceTo(target) < 2.0) {
+            sw.setWeakAttacking(true);
             target.hurt(sl.damageSources().mobAttack(sw), 2.0f);
             sw.setPendingThreateningHit(false);
         }

@@ -17,7 +17,7 @@ public class ModEntities {
             ENTITIES.register("skinwalker",
                     () -> EntityType.Builder.<SkinwalkerEntity>of(SkinwalkerEntity::new,
                                     MobCategory.MONSTER)
-                            .sized(0.9f, 3.5f)
+                            .sized(1.0f, 2.7f)
                             .clientTrackingRange(80)
                             .build("skinwalker"));
 
