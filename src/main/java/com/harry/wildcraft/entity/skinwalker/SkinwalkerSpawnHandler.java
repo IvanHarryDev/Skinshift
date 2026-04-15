@@ -32,7 +32,7 @@ public class SkinwalkerSpawnHandler {
     private static boolean hasSkinwalkerForPlayer(ServerLevel level, UUID playerUUID) {
         return !level.getEntitiesOfClass(SkinwalkerEntity.class,
                 new AABB(-30000, level.getMinBuildHeight(), -30000,
-                        30000,  level.getMaxBuildHeight(),  30000),
+                        30000, level.getMaxBuildHeight(), 30000),
                 sw -> playerUUID.equals(sw.getTargetPlayerUUID())
         ).isEmpty();
     }

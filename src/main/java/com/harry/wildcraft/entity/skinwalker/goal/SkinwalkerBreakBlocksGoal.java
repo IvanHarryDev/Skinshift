@@ -35,16 +35,12 @@ public class SkinwalkerBreakBlocksGoal extends Goal {
         double lookZ = sw.getLookAngle().z * 1.5;
 
         BlockPos lowerPos = BlockPos.containing(
-                sw.getX() + lookX,
-                sw.getY() + 0.5,
-                sw.getZ() + lookZ
+                sw.getX() + lookX, sw.getY() + 0.5, sw.getZ() + lookZ
         );
         tryBreak(level, lowerPos);
 
         BlockPos upperPos = BlockPos.containing(
-                sw.getX() + lookX,
-                sw.getY() + 1.5,
-                sw.getZ() + lookZ
+                sw.getX() + lookX, sw.getY() + 1.5, sw.getZ() + lookZ
         );
         tryBreak(level, upperPos);
     }

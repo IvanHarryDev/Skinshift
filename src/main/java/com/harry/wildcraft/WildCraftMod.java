@@ -1,8 +1,11 @@
 package com.harry.wildcraft;
 
 import com.harry.wildcraft.client.ClientSetup;
+import com.harry.wildcraft.client.camera.CameraShake;
+import com.harry.wildcraft.entity.skinwalker.SkinwalkerDecoyEventHandler;
 import com.harry.wildcraft.entity.skinwalker.SkinwalkerSpawnHandler;
 import com.harry.wildcraft.init.*;
+import com.harry.wildcraft.network.ModNetwork;
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -10,6 +13,7 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
 import software.bernie.geckolib.GeckoLib;
@@ -32,13 +36,21 @@ public class WildCraftMod {
 
         GeckoLib.initialize();
 
+        modBus.addListener(this::commonSetup);
         modBus.addListener(this::clientSetup);
+
         forgeBus.addListener(SkinwalkerSpawnHandler::onWorldTick);
         forgeBus.addListener(ModCommands::registerCommands);
+        forgeBus.register(SkinwalkerDecoyEventHandler.class);
+    }
+
+    private void commonSetup(final FMLCommonSetupEvent event) {
+        event.enqueueWork(ModNetwork::init);
     }
 
     @OnlyIn(Dist.CLIENT)
     private void clientSetup(final FMLClientSetupEvent event) {
         ClientSetup.init(event);
+        MinecraftForge.EVENT_BUS.register(new CameraShake());
     }
 }
