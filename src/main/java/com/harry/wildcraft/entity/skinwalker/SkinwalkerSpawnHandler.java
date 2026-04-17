@@ -23,8 +23,11 @@ public class SkinwalkerSpawnHandler {
 
         for (ServerPlayer player : level.players()) {
             if (player.isCreative() || player.isSpectator()) continue;
+
             if (hasSkinwalkerForPlayer(level, player.getUUID())) continue;
+
             if (level.random.nextInt(3) != 0) continue;
+
             spawnSkinwalkerForPlayer(level, player);
         }
     }
@@ -32,7 +35,7 @@ public class SkinwalkerSpawnHandler {
     private static boolean hasSkinwalkerForPlayer(ServerLevel level, UUID playerUUID) {
         return !level.getEntitiesOfClass(SkinwalkerEntity.class,
                 new AABB(-30000, level.getMinBuildHeight(), -30000,
-                        30000, level.getMaxBuildHeight(), 30000),
+                        30000,  level.getMaxBuildHeight(),  30000),
                 sw -> playerUUID.equals(sw.getTargetPlayerUUID())
         ).isEmpty();
     }
@@ -46,8 +49,11 @@ public class SkinwalkerSpawnHandler {
 
         sw.setTargetPlayer(player.getUUID());
         sw.moveTo(pos.x, pos.y, pos.z);
-        SkinwalkerMorphHelper.morphToClosestBiomeAnimal(sw, level, pos);
+
+        SkinwalkerMorphHelper.morphInstantToClosestBiomeAnimal(sw, level, pos);
+
         level.addFreshEntity(sw);
-        WildCraftMod.LOGGER.debug("Skinwalker spawned for player " + player.getName().getString());
+        WildCraftMod.LOGGER.debug("Skinwalker spawned for player {} at {}, {}, {}",
+                player.getName().getString(), (int)pos.x, (int)pos.y, (int)pos.z);
     }
 }

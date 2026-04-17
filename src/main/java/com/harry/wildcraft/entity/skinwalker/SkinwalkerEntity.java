@@ -73,6 +73,7 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
 
     public SkinwalkerEntity(EntityType<? extends SkinwalkerEntity> type, Level level) {
         super(type, level);
+        setPersistenceRequired();
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -554,6 +555,21 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
     @Override
     public int getAmbientSoundInterval() {
         return 600;
+    }
+
+    @Override
+    public boolean removeWhenFarAway(double distanceToClosestPlayer) {
+        return false;
+    }
+
+    @Override
+    public boolean isPersistenceRequired() {
+        return true;
+    }
+
+    @Override
+    public void checkDespawn() {
+        // Nothing
     }
 
     @Override

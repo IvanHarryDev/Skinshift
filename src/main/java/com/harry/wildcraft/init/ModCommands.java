@@ -25,6 +25,7 @@ import net.minecraftforge.event.RegisterCommandsEvent;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 public class ModCommands {
 
@@ -102,7 +103,10 @@ public class ModCommands {
         }
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         SkinwalkerEntity sw = findNearest(player);
-        if (sw == null) { ctx.getSource().sendFailure(col("No SW nearby.", C_RED)); return 0; }
+        if (sw == null) {
+            ctx.getSource().sendFailure(col("No SW nearby.", C_RED));
+            return 0;
+        }
 
         resetAllAnimFlags(sw);
         sw.getNavigation().stop();
@@ -118,22 +122,53 @@ public class ModCommands {
         }
 
         switch (animName) {
-            case "idle":          break;
-            case "walk":          forceMove(sw, 0.05); break;
-            case "sprint":        forceMove(sw, 0.3); break;
-            case "walk_enraged":  sw.setMode(SkinwalkerMode.AGGRESSIVE); forceMove(sw, 0.05); break;
-            case "sprint_enraged":sw.setMode(SkinwalkerMode.AGGRESSIVE); forceMove(sw, 0.3); break;
-            case "morph":         sw.setMorphing(true); break;
-            case "scream":        sw.setScreaming(true); break;
-            case "melee_hurt":    sw.setMeleeHurt(true); break;
-            case "ranged_hurt":   sw.setRangedHurt(true); break;
-            case "weak_attack":   sw.setWeakAttacking(true); break;
-            case "strong_attack": sw.setStrongAttacking(true); break;
+            case "idle":
+                break;
+            case "walk":
+                forceMove(sw, 0.05);
+                break;
+            case "sprint":
+                forceMove(sw, 0.3);
+                break;
+            case "walk_enraged":
+                sw.setMode(SkinwalkerMode.AGGRESSIVE);
+                forceMove(sw, 0.05);
+                break;
+            case "sprint_enraged":
+                sw.setMode(SkinwalkerMode.AGGRESSIVE);
+                forceMove(sw, 0.3);
+                break;
+            case "morph":
+                sw.setMorphing(true);
+                break;
+            case "scream":
+                sw.setScreaming(true);
+                break;
+            case "melee_hurt":
+                sw.setMeleeHurt(true);
+                break;
+            case "ranged_hurt":
+                sw.setRangedHurt(true);
+                break;
+            case "weak_attack":
+                sw.setWeakAttacking(true);
+                break;
+            case "strong_attack":
+                sw.setStrongAttacking(true);
+                break;
             case "catch_to_drag":
-            case "drag":          sw.setDraggingPlayer(true); break;
-            case "eat":           sw.setEating(true); break;
-            case "crouch":        sw.setCrouchingAnim(true); break;
-            case "look_around":   sw.setLookingAround(true); break;
+            case "drag":
+                sw.setDraggingPlayer(true);
+                break;
+            case "eat":
+                sw.setEating(true);
+                break;
+            case "crouch":
+                sw.setCrouchingAnim(true);
+                break;
+            case "look_around":
+                sw.setLookingAround(true);
+                break;
         }
 
         final String name = animName;
@@ -164,8 +199,12 @@ public class ModCommands {
     // ═══════════════════════════════════════════════════════════
     private static int showInfo(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
-        List<SkinwalkerEntity> allSWs = findAll(player.serverLevel());
-        if (allSWs.isEmpty()) { ctx.getSource().sendFailure(col("No SWs in world.", C_RED)); return 0; }
+        ServerLevel level = player.serverLevel();
+        List<SkinwalkerEntity> allSWs = findAll(level);
+        if (allSWs.isEmpty()) {
+            ctx.getSource().sendFailure(col("No SWs in world.", C_RED));
+            return 0;
+        }
 
         send(ctx, col("━━━━━━━ SKINWALKERS: " + allSWs.size() + " ━━━━━━━", C_GOLD));
         for (int i = 0; i < allSWs.size(); i++) {
@@ -182,6 +221,25 @@ public class ModCommands {
             send(ctx, line(" │ Locked", bool(sw.isModeLocked()), sw.isModeLocked() ? C_RED : C_GREEN));
             send(ctx, line(" │ HP", String.format("%.0f/%.0f", sw.getHealth(), sw.getMaxHealth()),
                     sw.getHealth() < 50 ? C_RED : C_GREEN));
+
+            UUID targetUUID = sw.getTargetPlayerUUID();
+            String targetStr;
+            int targetColor;
+            if (targetUUID == null) {
+                targetStr = "none";
+                targetColor = C_GRAY;
+            } else {
+                ServerPlayer targetPlayer = level.getServer().getPlayerList().getPlayer(targetUUID);
+                if (targetPlayer != null) {
+                    targetStr = targetPlayer.getGameProfile().getName();
+                    targetColor = C_GREEN;
+                } else {
+                    targetStr = targetUUID.toString().substring(0, 8) + " (offline)";
+                    targetColor = C_YELLOW;
+                }
+            }
+            send(ctx, line(" │ Target", targetStr, targetColor));
+
             send(ctx, line(" │ Morphed", bool(sw.isMorphed()) + (sw.isMorphed() ? " → " + sw.getMorphedInto() : ""),
                     sw.isMorphed() ? C_AQUA : C_GRAY));
             if (sw.getCurrentDecoy() != null)
@@ -223,8 +281,12 @@ public class ModCommands {
     private static int setMode(CommandContext<CommandSourceStack> ctx, SkinwalkerMode mode) throws CommandSyntaxException {
         ServerPlayer p = ctx.getSource().getPlayerOrException();
         SkinwalkerEntity sw = findNearest(p);
-        if (sw == null) { ctx.getSource().sendFailure(col("No SW.", C_RED)); return 0; }
-        sw.setMode(mode); sw.setModeTimer(0);
+        if (sw == null) {
+            ctx.getSource().sendFailure(col("No SW.", C_RED));
+            return 0;
+        }
+        sw.setMode(mode);
+        sw.setModeTimer(0);
         resetAllAnimFlags(sw);
         ctx.getSource().sendSuccess(() -> col("Mode → ", C_GRAY).append(col(mode.name(), C_YELLOW)), false);
         return Command.SINGLE_SUCCESS;
@@ -233,7 +295,10 @@ public class ModCommands {
     private static int forceMorph(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer p = ctx.getSource().getPlayerOrException();
         SkinwalkerEntity sw = findNearest(p);
-        if (sw == null) { ctx.getSource().sendFailure(col("No SW.", C_RED)); return 0; }
+        if (sw == null) {
+            ctx.getSource().sendFailure(col("No SW.", C_RED));
+            return 0;
+        }
         resetAllAnimFlags(sw);
         SkinwalkerMorphHelper.morphInstantToClosestBiomeAnimal(sw, p.serverLevel(), sw.position());
         ctx.getSource().sendSuccess(() -> col("Morphed", C_GREEN), false);
@@ -243,7 +308,10 @@ public class ModCommands {
     private static int forceUnmorph(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer p = ctx.getSource().getPlayerOrException();
         SkinwalkerEntity sw = findNearest(p);
-        if (sw == null) { ctx.getSource().sendFailure(col("No SW.", C_RED)); return 0; }
+        if (sw == null) {
+            ctx.getSource().sendFailure(col("No SW.", C_RED));
+            return 0;
+        }
         resetAllAnimFlags(sw);
         SkinwalkerMorphHelper.unmorphInstant(sw);
         ctx.getSource().sendSuccess(() -> col("Unmorphed", C_GREEN), false);
@@ -253,8 +321,12 @@ public class ModCommands {
     private static int setTimer(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer p = ctx.getSource().getPlayerOrException();
         SkinwalkerEntity sw = findNearest(p);
-        if (sw == null) { ctx.getSource().sendFailure(col("No SW.", C_RED)); return 0; }
-        int t = IntegerArgumentType.getInteger(ctx, "ticks"); sw.setModeTimer(t);
+        if (sw == null) {
+            ctx.getSource().sendFailure(col("No SW.", C_RED));
+            return 0;
+        }
+        int t = IntegerArgumentType.getInteger(ctx, "ticks");
+        sw.setModeTimer(t);
         ctx.getSource().sendSuccess(() -> col("Timer → " + t, C_WHITE), false);
         return Command.SINGLE_SUCCESS;
     }
@@ -262,7 +334,10 @@ public class ModCommands {
     private static int setLock(CommandContext<CommandSourceStack> ctx, boolean lock) throws CommandSyntaxException {
         ServerPlayer p = ctx.getSource().getPlayerOrException();
         SkinwalkerEntity sw = findNearest(p);
-        if (sw == null) { ctx.getSource().sendFailure(col("No SW.", C_RED)); return 0; }
+        if (sw == null) {
+            ctx.getSource().sendFailure(col("No SW.", C_RED));
+            return 0;
+        }
         sw.setModeLocked(lock);
         ctx.getSource().sendSuccess(() -> col("Timer " + (lock ? "LOCKED" : "UNLOCKED"), lock ? C_RED : C_GREEN), false);
         return Command.SINGLE_SUCCESS;
@@ -271,7 +346,10 @@ public class ModCommands {
     private static int doTeleport(CommandContext<CommandSourceStack> ctx, int dist) throws CommandSyntaxException {
         ServerPlayer p = ctx.getSource().getPlayerOrException();
         SkinwalkerEntity sw = findNearest(p);
-        if (sw == null) { ctx.getSource().sendFailure(col("No SW.", C_RED)); return 0; }
+        if (sw == null) {
+            ctx.getSource().sendFailure(col("No SW.", C_RED));
+            return 0;
+        }
         Vec3 look = p.getLookAngle().normalize();
         sw.teleportTo(p.getX() + look.x * dist, p.getY(), p.getZ() + look.z * dist);
         ctx.getSource().sendSuccess(() -> col("TP " + dist + "b", C_GREEN), false);
@@ -290,8 +368,19 @@ public class ModCommands {
                 new AABB(-30000, level.getMinBuildHeight(), -30000, 30000, level.getMaxBuildHeight(), 30000));
     }
 
-    private static MutableComponent col(String t, int c) { return Component.literal(t).setStyle(Style.EMPTY.withColor(TextColor.fromRgb(c))); }
-    private static MutableComponent line(String l, String v, int c) { return col(l + ": ", C_GRAY).append(col(v, c)); }
-    private static String bool(boolean v) { return v ? "✔" : "✘"; }
-    private static void send(CommandContext<CommandSourceStack> ctx, Component m) { ctx.getSource().sendSuccess(() -> m, false); }
+    private static MutableComponent col(String t, int c) {
+        return Component.literal(t).setStyle(Style.EMPTY.withColor(TextColor.fromRgb(c)));
+    }
+
+    private static MutableComponent line(String l, String v, int c) {
+        return col(l + ": ", C_GRAY).append(col(v, c));
+    }
+
+    private static String bool(boolean v) {
+        return v ? "✔" : "✘";
+    }
+
+    private static void send(CommandContext<CommandSourceStack> ctx, Component m) {
+        ctx.getSource().sendSuccess(() -> m, false);
+    }
 }
