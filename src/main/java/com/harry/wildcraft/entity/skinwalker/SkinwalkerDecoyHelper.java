@@ -16,6 +16,10 @@ public class SkinwalkerDecoyHelper {
 
     private static final double MIN_MOVEMENT_THRESHOLD_SQR = 0.002 * 0.002;
 
+    private static final double SWIM_HORIZONTAL_SPEED = 0.08;
+    private static final double SWIM_BUOYANCY = 0.04;
+    private static final double SWIM_MAX_Y = 0.12;
+
     @Nullable
     public static Mob createDecoy(SkinwalkerEntity sw, ServerLevel level, EntityType<?> entityType) {
         Entity raw = entityType.create(level);
@@ -37,6 +41,8 @@ public class SkinwalkerDecoyHelper {
     public static void stabilizeDecoy(Mob decoy) {
         if (decoy == null || !decoy.isAlive()) return;
 
+        if (decoy.isInFluidType()) return;
+
         Vec3 dm = decoy.getDeltaMovement();
         boolean hasPath = !decoy.getNavigation().isDone();
         double horizSqr = dm.x * dm.x + dm.z * dm.z;
@@ -44,6 +50,43 @@ public class SkinwalkerDecoyHelper {
         if (!hasPath || horizSqr < MIN_MOVEMENT_THRESHOLD_SQR) {
             decoy.setDeltaMovement(0, dm.y, 0);
         }
+    }
+
+    public static void tickDecoySwimming(Mob decoy, Player target) {
+        if (decoy == null || !decoy.isAlive() || target == null) return;
+        if (!decoy.isInFluidType()) return;
+
+        Vec3 decoyPos = decoy.position();
+        Vec3 targetPos = target.position();
+        double dx = targetPos.x - decoyPos.x;
+        double dz = targetPos.z - decoyPos.z;
+        double horizDist = Math.sqrt(dx * dx + dz * dz);
+
+        decoy.getNavigation().stop();
+
+        Vec3 dm = decoy.getDeltaMovement();
+        double vx = dm.x;
+        double vz = dm.z;
+
+        if (horizDist > 1.2) {
+            double nx = dx / horizDist;
+            double nz = dz / horizDist;
+            vx = nx * SWIM_HORIZONTAL_SPEED;
+            vz = nz * SWIM_HORIZONTAL_SPEED;
+
+            float yaw = (float) (Math.atan2(nz, nx) * (180.0 / Math.PI)) - 90f;
+            decoy.setYRot(yaw);
+            decoy.yBodyRot = yaw;
+        } else {
+            vx *= 0.5;
+            vz *= 0.5;
+        }
+
+        double vy = Math.min(dm.y + SWIM_BUOYANCY, SWIM_MAX_Y);
+
+        decoy.setDeltaMovement(vx, vy, vz);
+        decoy.resetFallDistance();
+        decoy.getLookControl().setLookAt(target, 30f, 30f);
     }
 
     public static void tickDecoy(SkinwalkerEntity sw, Mob decoy) {
@@ -61,7 +104,11 @@ public class SkinwalkerDecoyHelper {
         if (decoy == null || !decoy.isAlive()) return;
         decoy.getNavigation().stop();
         Vec3 dm = decoy.getDeltaMovement();
-        decoy.setDeltaMovement(0, dm.y, 0);
+        if (decoy.isInFluidType()) {
+            decoy.setDeltaMovement(0, Math.min(dm.y + SkinwalkerDecoyHelper.SWIM_BUOYANCY, SkinwalkerDecoyHelper.SWIM_MAX_Y), 0);
+        } else {
+            decoy.setDeltaMovement(0, dm.y, 0);
+        }
         if (lookAt != null) {
             decoy.getLookControl().setLookAt(lookAt, 30f, 30f);
         }
@@ -69,6 +116,7 @@ public class SkinwalkerDecoyHelper {
 
     public static void stalkTowards(Mob decoy, Player target, double speed) {
         if (decoy == null || !decoy.isAlive() || target == null) return;
+        if (decoy.isInFluidType()) return;
         decoy.getNavigation().moveTo(target, speed);
     }
 

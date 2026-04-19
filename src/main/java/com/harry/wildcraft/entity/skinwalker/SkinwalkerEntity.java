@@ -17,11 +17,15 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.navigation.AmphibiousPathNavigation;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.common.ForgeMod;
+import net.minecraftforge.fluids.FluidType;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.core.animation.AnimatableManager;
@@ -72,7 +76,7 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
     private static final EntityDimensions NORMAL_DIMENSIONS = EntityDimensions.scalable(0.6f, 2.4f);
     private static final EntityDimensions MORPHED_DIMENSIONS = EntityDimensions.scalable(0.01f, 0.01f);
 
-    public static final int MORPH_ANIM_TICKS = 120;
+    public static final int MORPH_ANIM_TICKS = 140;
 
     public static final int PASSIVE_DURATION = 24000 * 3;
     public static final int THREATENING_DURATION = 24000 * 2;
@@ -82,17 +86,54 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
     public SkinwalkerEntity(EntityType<? extends SkinwalkerEntity> type, Level level) {
         super(type, level);
         setPersistenceRequired();
+        this.setPathfindingMalus(net.minecraft.world.level.pathfinder.BlockPathTypes.WATER, 0.0f);
+        this.setPathfindingMalus(net.minecraft.world.level.pathfinder.BlockPathTypes.WATER_BORDER, 0.0f);
+        this.setPathfindingMalus(net.minecraft.world.level.pathfinder.BlockPathTypes.LAVA, 0.0f);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
                 .add(Attributes.MAX_HEALTH, 200).add(Attributes.MOVEMENT_SPEED, 0.3)
                 .add(Attributes.ATTACK_DAMAGE, 8).add(Attributes.FOLLOW_RANGE, 256)
-                .add(Attributes.KNOCKBACK_RESISTANCE, 1);
+                .add(Attributes.KNOCKBACK_RESISTANCE, 1)
+                .add(ForgeMod.SWIM_SPEED.get(), 1.0);
     }
 
     public SkinwalkerCombatManager getCombatManager() {
         return combatManager;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  AMPHIBIOUS NAVIGATION
+    // ═══════════════════════════════════════════════════════════
+    @Override
+    protected PathNavigation createNavigation(Level level) {
+        return new AmphibiousPathNavigation(this, level);
+    }
+
+    @Override
+    public boolean canSwimInFluidType(FluidType type) {
+        return true;
+    }
+
+    @Override
+    public boolean canDrownInFluidType(FluidType type) {
+        return false;
+    }
+
+    @Override
+    public boolean isPushedByFluid() {
+        return false;
+    }
+
+    @Override
+    public boolean canBeAffected(net.minecraft.world.effect.MobEffectInstance effect) {
+        return super.canBeAffected(effect);
+    }
+
+    @Override
+    public boolean fireImmune() {
+        return true;
     }
 
     @Override
@@ -151,6 +192,10 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
             setDeltaMovement(0, 0, 0);
         }
 
+        if (lockedPosition == null && currentDecoy == null && isInFluidType()) {
+            applyBuoyancy(this);
+        }
+
         if (morphTimer >= 0) {
             morphTimer++;
             if (lockedPosition == null) lockPosition();
@@ -192,6 +237,13 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
         }
     }
 
+    public static void applyBuoyancy(net.minecraft.world.entity.LivingEntity entity) {
+        Vec3 dm = entity.getDeltaMovement();
+        double targetY = Math.min(dm.y + 0.04, 0.1);
+        entity.setDeltaMovement(dm.x, targetY, dm.z);
+        entity.resetFallDistance();
+    }
+
     private void handleDecoy() {
         if (!(level() instanceof ServerLevel sl)) return;
         String mi = getMorphedInto();
@@ -205,8 +257,15 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
                     currentDecoyType = mi;
                 }
             }
-
             SkinwalkerDecoyHelper.stabilizeDecoy(currentDecoy);
+
+            if (targetPlayerUUID != null) {
+                Player tp = sl.getPlayerByUUID(targetPlayerUUID);
+                if (tp != null) {
+                    SkinwalkerDecoyHelper.tickDecoySwimming(currentDecoy, tp);
+                }
+            }
+
             SkinwalkerDecoyHelper.tickDecoy(this, currentDecoy);
         } else if (currentDecoy != null) {
             SkinwalkerDecoyHelper.removeDecoy(currentDecoy);
@@ -385,6 +444,7 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
     public void poofAndRespawn(ServerLevel level, Player target) {
         level.sendParticles(net.minecraft.core.particles.ParticleTypes.LARGE_SMOKE,
                 getX(), getY() + 1, getZ(), 30, .5, .8, .5, .05);
+        // findPositionOutOfSight ya rechaza agua/lava (isSafeGround + isSafeSpawnArea)
         Vec3 p = SightHelper.findPositionOutOfSight(level, (ServerPlayer) target, 100, 15);
         if (p != null) {
             unlockPosition();
