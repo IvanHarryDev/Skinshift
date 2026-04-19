@@ -47,6 +47,12 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
     public static final EntityDataAccessor<Boolean> IS_CROUCHING_ANIM = SynchedEntityData.defineId(SkinwalkerEntity.class, EntityDataSerializers.BOOLEAN);
     public static final EntityDataAccessor<Boolean> IS_LOOKING_AROUND = SynchedEntityData.defineId(SkinwalkerEntity.class, EntityDataSerializers.BOOLEAN);
 
+    public static final EntityDataAccessor<String> MORPH_SOURCE = SynchedEntityData.defineId(SkinwalkerEntity.class, EntityDataSerializers.STRING);
+    public static final EntityDataAccessor<String> MORPH_TARGET = SynchedEntityData.defineId(SkinwalkerEntity.class, EntityDataSerializers.STRING);
+
+    private static final String PIG_ID = "entity.minecraft.pig";
+    private static final String WOLF_ID = "entity.minecraft.wolf";
+
     private UUID targetPlayerUUID;
     private int modeTimer = 0;
     private boolean modeLocked = false;
@@ -65,7 +71,9 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
 
     private static final EntityDimensions NORMAL_DIMENSIONS = EntityDimensions.scalable(0.6f, 2.4f);
     private static final EntityDimensions MORPHED_DIMENSIONS = EntityDimensions.scalable(0.01f, 0.01f);
-    public static final int MORPH_ANIM_TICKS = 40;
+
+    public static final int MORPH_ANIM_TICKS = 120;
+
     public static final int PASSIVE_DURATION = 24000 * 3;
     public static final int THREATENING_DURATION = 24000 * 2;
 
@@ -103,6 +111,8 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
         entityData.define(IS_DRAGGING, false);
         entityData.define(IS_CROUCHING_ANIM, false);
         entityData.define(IS_LOOKING_AROUND, false);
+        entityData.define(MORPH_SOURCE, "none");
+        entityData.define(MORPH_TARGET, "none");
     }
 
     @Override
@@ -131,21 +141,16 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
         lockedPosition = null;
     }
 
-    // ═══════════════════════════════════════════════════════════
-    //  TICK
-    // ═══════════════════════════════════════════════════════════
     @Override
     public void tick() {
         super.tick();
         if (level().isClientSide) return;
 
-        // Position lock
         if (lockedPosition != null) {
             setPos(lockedPosition.x, lockedPosition.y, lockedPosition.z);
             setDeltaMovement(0, 0, 0);
         }
 
-        // Morph timer
         if (morphTimer >= 0) {
             morphTimer++;
             if (lockedPosition == null) lockPosition();
@@ -155,10 +160,8 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
             }
         }
 
-        // Decoy
         handleDecoy();
 
-        // ═══ COMBAT MANAGER ═══
         if (level() instanceof ServerLevel sl && getMode() == SkinwalkerMode.AGGRESSIVE
                 && targetPlayerUUID != null) {
             if (combatManager.getPhase() == SkinwalkerCombatManager.Phase.INACTIVE) {
@@ -202,6 +205,8 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
                     currentDecoyType = mi;
                 }
             }
+
+            SkinwalkerDecoyHelper.stabilizeDecoy(currentDecoy);
             SkinwalkerDecoyHelper.tickDecoy(this, currentDecoy);
         } else if (currentDecoy != null) {
             SkinwalkerDecoyHelper.removeDecoy(currentDecoy);
@@ -216,7 +221,6 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
         return null;
     }
 
-    // Kill
     @Override
     public void remove(RemovalReason r) {
         cleanupDecoy();
@@ -249,12 +253,15 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
         return currentDecoy;
     }
 
-    // Morph
     public void startMorph(String t, boolean owl) {
         if (morphTimer >= 0) applyPendingMorph();
         cleanupDecoy();
         pendingMorphTarget = t;
         pendingMorphIsOwl = owl;
+
+        setMorphSource(getMorphedInto());
+        setMorphTarget(t);
+
         morphTimer = 0;
         setMorphing(true);
         getNavigation().stop();
@@ -279,12 +286,16 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
             setMorphed(true);
             if (owl) setNoGravity(true);
         }
+        setMorphSource("none");
+        setMorphTarget("none");
     }
 
     private void applyPendingMorph() {
         if (pendingMorphTarget == null) {
             morphTimer = -1;
             setMorphing(false);
+            setMorphSource("none");
+            setMorphTarget("none");
             return;
         }
         if (pendingMorphTarget.equals("none")) {
@@ -300,13 +311,40 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
         pendingMorphTarget = null;
         pendingMorphIsOwl = false;
         setMorphing(false);
+        setMorphSource("none");
+        setMorphTarget("none");
     }
 
     public boolean isMorphInProgress() {
         return morphTimer >= 0;
     }
 
-    // Combat
+    public String getMorphSource() {
+        return entityData.get(MORPH_SOURCE);
+    }
+
+    public void setMorphSource(String v) {
+        entityData.set(MORPH_SOURCE, v);
+    }
+
+    public String getMorphTarget() {
+        return entityData.get(MORPH_TARGET);
+    }
+
+    public void setMorphTarget(String v) {
+        entityData.set(MORPH_TARGET, v);
+    }
+
+    public boolean isMorphBackFromPig() {
+        if (!isMorphing()) return false;
+        return PIG_ID.equals(getMorphSource()) && "none".equals(getMorphTarget());
+    }
+
+    public boolean isMorphToWolf() {
+        if (!isMorphing()) return false;
+        return WOLF_ID.equals(getMorphTarget());
+    }
+
     @Override
     public boolean hurt(DamageSource source, float amount) {
         if (level().isClientSide) return false;
@@ -327,7 +365,6 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
             }
             return false;
         }
-        // AGGRESSIVE
         if (proj && isDraggingPlayer()) {
             setDraggingPlayer(false);
             setScreaming(true);
@@ -357,7 +394,6 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
         }
     }
 
-    // Persistence
     @Override
     public void addAdditionalSaveData(CompoundTag t) {
         super.addAdditionalSaveData(t);
@@ -382,7 +418,6 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
         if (t.hasUUID("SWTargetPlayer")) targetPlayerUUID = t.getUUID("SWTargetPlayer");
     }
 
-    // Getters/Setters
     public SkinwalkerMode getMode() {
         return SkinwalkerMode.fromId(entityData.get(MODE));
     }
@@ -569,13 +604,20 @@ public class SkinwalkerEntity extends Monster implements GeoEntity {
 
     @Override
     public void checkDespawn() {
-        // Nothing
     }
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar r) {
         r.add(new AnimationController<>(this, "main", 5, s -> {
-            if (isMorphing()) return s.setAndContinue(RawAnimation.begin().thenPlay("animation.skinwalker.morph"));
+            if (isMorphing()) {
+                if (isMorphBackFromPig()) {
+                    return s.setAndContinue(RawAnimation.begin().thenPlay("animation.skinwalker.morph_back_pig"));
+                }
+                if (isMorphToWolf()) {
+                    return s.setAndContinue(RawAnimation.begin().thenPlay("animation.skinwalker.morph_wolf"));
+                }
+                return s.setAndContinue(RawAnimation.begin().thenPlay("animation.skinwalker.morph"));
+            }
             if (isScreaming()) {
                 if (s.getController().getAnimationState() == AnimationController.State.STOPPED) setScreaming(false);
                 return s.setAndContinue(RawAnimation.begin().thenPlay("animation.skinwalker.scream"));

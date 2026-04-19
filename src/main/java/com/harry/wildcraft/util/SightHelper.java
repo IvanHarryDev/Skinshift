@@ -44,6 +44,7 @@ public class SightHelper {
             if (surfacePos.getY() <= level.getMinBuildHeight()) continue;
 
             if (!isSafeGround(level, surfacePos)) continue;
+            if (!isSafeSpawnArea(level, surfacePos)) continue;
 
             return new Vec3(surfacePos.getX() + 0.5, surfacePos.getY(), surfacePos.getZ() + 0.5);
         }
@@ -58,6 +59,7 @@ public class SightHelper {
 
         if (surfacePos.getY() <= level.getMinBuildHeight()) return null;
         if (!isSafeGround(level, surfacePos)) return null;
+        if (!isSafeSpawnArea(level, surfacePos)) return null;
 
         return new Vec3(surfacePos.getX() + 0.5, surfacePos.getY(), surfacePos.getZ() + 0.5);
     }
@@ -65,14 +67,40 @@ public class SightHelper {
     private static boolean isSafeGround(ServerLevel level, BlockPos pos) {
         BlockState stateAt = level.getBlockState(pos);
         if (!stateAt.getFluidState().isEmpty()) return false;
+        if (stateAt.is(Blocks.WATER) || stateAt.is(Blocks.LAVA)) return false;
+
+        BlockState stateAbove = level.getBlockState(pos.above());
+        if (!stateAbove.getFluidState().isEmpty()) return false;
+        if (stateAbove.is(Blocks.WATER) || stateAbove.is(Blocks.LAVA)) return false;
+
+        BlockState stateAbove2 = level.getBlockState(pos.above(2));
+        if (!stateAbove2.getFluidState().isEmpty()) return false;
+        if (stateAbove2.is(Blocks.WATER) || stateAbove2.is(Blocks.LAVA)) return false;
 
         BlockPos below = pos.below();
         BlockState stateBelow = level.getBlockState(below);
         if (!stateBelow.getFluidState().isEmpty()) return false;
         if (stateBelow.is(Blocks.WATER) || stateBelow.is(Blocks.LAVA)) return false;
-
         if (!stateBelow.isSolid()) return false;
 
+        return true;
+    }
+
+    private static boolean isSafeSpawnArea(ServerLevel level, BlockPos pos) {
+        BlockPos below = pos.below();
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                if (dx == 0 && dz == 0) continue;
+                BlockPos neighbor = below.offset(dx, 0, dz);
+                BlockState ns = level.getBlockState(neighbor);
+                if (!ns.getFluidState().isEmpty()) return false;
+                if (ns.is(Blocks.WATER) || ns.is(Blocks.LAVA)) return false;
+
+                BlockPos neighborAt = pos.offset(dx, 0, dz);
+                BlockState nas = level.getBlockState(neighborAt);
+                if (!nas.getFluidState().isEmpty()) return false;
+            }
+        }
         return true;
     }
 }

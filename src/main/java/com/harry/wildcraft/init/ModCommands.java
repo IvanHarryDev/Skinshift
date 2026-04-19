@@ -32,7 +32,8 @@ public class ModCommands {
     private static final List<String> ANIMATIONS = Arrays.asList(
             "idle", "walk", "sprint",
             "walk_enraged", "sprint_enraged",
-            "morph", "scream",
+            "morph", "morph_back_pig", "morph_wolf",
+            "scream",
             "melee_hurt", "ranged_hurt",
             "weak_attack", "strong_attack",
             "catch_to_drag", "drag",
@@ -46,6 +47,9 @@ public class ModCommands {
     private static final int C_GOLD = 0xFFAA00, C_YELLOW = 0xFFFF55, C_GREEN = 0x55FF55,
             C_RED = 0xFF5555, C_AQUA = 0x55FFFF, C_GRAY = 0xAAAAAA,
             C_WHITE = 0xFFFFFF, C_PURPLE = 0xFF55FF;
+
+    private static final String PIG_ID = "entity.minecraft.pig";
+    private static final String WOLF_ID = "entity.minecraft.wolf";
 
     public static void registerCommands(RegisterCommandsEvent event) {
         event.getDispatcher().register(
@@ -116,6 +120,9 @@ public class ModCommands {
 
         sw.setModeLocked(true);
 
+        sw.setMorphSource("none");
+        sw.setMorphTarget("none");
+
         if (animName.equals("stop")) {
             ctx.getSource().sendSuccess(() -> col("▶ idle", C_GREEN), false);
             return Command.SINGLE_SUCCESS;
@@ -139,6 +146,16 @@ public class ModCommands {
                 forceMove(sw, 0.3);
                 break;
             case "morph":
+                sw.setMorphing(true);
+                break;
+            case "morph_back_pig":
+                sw.setMorphSource(PIG_ID);
+                sw.setMorphTarget("none");
+                sw.setMorphing(true);
+                break;
+            case "morph_wolf":
+                sw.setMorphSource("none");
+                sw.setMorphTarget(WOLF_ID);
                 sw.setMorphing(true);
                 break;
             case "scream":

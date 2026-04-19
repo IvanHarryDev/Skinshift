@@ -9,8 +9,8 @@ public class SkinwalkerModel extends GeoModel<SkinwalkerEntity> {
 
     private static final ResourceLocation TEXTURE_NORMAL =
             ResourceLocation.fromNamespaceAndPath(WildCraftMod.MOD_ID, "textures/entity/skinwalker.png");
-    private static final ResourceLocation TEXTURE_MORPHING =
-            ResourceLocation.fromNamespaceAndPath(WildCraftMod.MOD_ID, "textures/entity/skinwalker_morphing.png");
+    private static final ResourceLocation TEXTURE_PIG_AND_WOLF =
+            ResourceLocation.fromNamespaceAndPath(WildCraftMod.MOD_ID, "textures/entity/skinwalker_pig_and_wolf.png");
 
     @Override
     public ResourceLocation getModelResource(SkinwalkerEntity entity) {
@@ -20,7 +20,7 @@ public class SkinwalkerModel extends GeoModel<SkinwalkerEntity> {
     @Override
     public ResourceLocation getTextureResource(SkinwalkerEntity entity) {
         if (entity.isMorphing()) {
-            return TEXTURE_MORPHING;
+            return TEXTURE_PIG_AND_WOLF;
         }
         return TEXTURE_NORMAL;
     }
